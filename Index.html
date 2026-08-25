@@ -17,7 +17,6 @@
       <input type="hidden" id="rowIndex" name="rowIndex">
       <input type="hidden" id="ID_cal_tarifs_26-50" name="ID_cal_tarifs_26-50">
       
-      <!-- Ligne 1 : Année et Semaine -->
       <div class="form-row">
         <div class="form-group">
           <label>Année :</label>
@@ -29,7 +28,6 @@
         </div>
       </div>
       
-      <!-- Ligne 2 : Dates -->
       <div class="form-row">
         <div class="form-group">
           <label>Date Début (Samedi) :</label>
@@ -41,21 +39,17 @@
         </div>
       </div>
 
-      <!-- Ligne 3 : Tarifs (Exclusifs) -->
       <div class="form-row">
         <div class="form-group">
           <label>Tarif OT (€) :</label>
-          <!-- Événement oninput pour déclencher l'exclusivité -->
           <input type="number" id="tarif_ot" name="tarif_ot" step="0.01" oninput="gererSaisieTarif('ot')">
         </div>
         <div class="form-group">
           <label>Tarif Libre (€) :</label>
-          <!-- Modifiez name="tarif_libre" par name="tarifs_libres" si votre colonne a un 's' -->
           <input type="number" id="tarif_libre" name="tarif_libre" step="0.01" oninput="gererSaisieTarif('libre')">
         </div>
       </div>
       
-      <!-- Ligne 4 : Déductions et Calculs -->
       <div class="form-row">
         <div class="form-group">
           <label>Commission OT (€) :</label>

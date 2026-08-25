@@ -33,7 +33,6 @@
             let saisonTrouvee = resultat.data['saison'] || "";
             document.getElementById('saison').value = saisonTrouvee;
             
-            // Si la vieille réservation n'avait pas de saison, on la déduit avec cal_station
             if (saisonTrouvee === "") {
                 google.script.run.withSuccessHandler(function(infos) {
                     if (infos && infos.saison) {
@@ -98,7 +97,6 @@
     }
   }
 
-  // Même logique autonome de calendrier que pour les tarifs
   function verifierEtRemplirCalendrier() {
     const dateDebut = document.getElementById('Date Début (Samedi)').value;
     if (!dateDebut) return;
@@ -116,25 +114,27 @@
     let semaineNum = Math.ceil((days + janFirst.getDay() + 1) / 7);
     document.getElementById('semaine').value = semaineNum > 52 ? 52 : semaineNum;
     
-    // --- Remplissage en direct de l'état de la station ET de la saison ---
+    // CORRECTION : Restauration de l'appel pour remplir Année et Semaine depuis cal_26-50
+    google.script.run.withSuccessHandler(function(infos) {
+      if (infos) {
+        document.getElementById('Année').value = infos.annee;
+        document.getElementById('semaine').value = infos.semaine;
+        document.getElementById('Date Fin (Samedi)').value = infos.dateFin;
+      }
+    }).recupererInfosCalendrier(dateDebut);
+
+    // Remplissage en direct de l'état de la station ET de la saison depuis cal_station
     google.script.run.withSuccessHandler(function(infos) {
       document.getElementById('etat_station').value = infos.etat;
       if (document.getElementById('saison')) {
         document.getElementById('saison').value = infos.saison;
       }
     }).getInfosStationParDate(dateDebut);
-
-    // --- NOUVEAU : Remplissage en direct de l'état de la station ---
-    google.script.run.withSuccessHandler(function(etat) {
-      document.getElementById('etat_station').value = etat;
-    }).getEtatStationParDate(dateDebut);
   }
 
-  // Exécuté automatiquement à l'ouverture de la fenêtre des réservations
   window.onload = function() {
     google.script.run.withSuccessHandler(function(origines) {
       const select = document.getElementById('origine_reservation');
-      // On injecte chaque origine trouvée dans la feuille "listes" comme nouvelle option
       origines.forEach(function(org) {
         let option = document.createElement('option');
         option.value = org;

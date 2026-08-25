@@ -2,7 +2,6 @@ function getSheetData(nomFeuille) {
   return SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nomFeuille).getDataRange().getValues();
 }
 
-// Chercher une ligne par son ID
 function rechercherEnregistrement(nomFeuille, idColIndex, idValue) {
   const data = getSheetData(nomFeuille);
   const entetes = data[0];
@@ -16,38 +15,28 @@ function rechercherEnregistrement(nomFeuille, idColIndex, idValue) {
       return { row: i + 1, data: objetResultat };
     }
   }
-  return null; // Non trouvé
+  return null; 
 }
 
-// Créer une nouvelle ligne (génère l'ID automatiquement, version 100% blindée)
 function creerEnregistrement(nomFeuille, idColName, formData) {
   const feuille = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nomFeuille);
   const entetes = feuille.getRange(1, 1, 1, feuille.getLastColumn()).getValues()[0];
   
-  // 1. Génération de l'ID unique
   const nouvelId = genererIdUnique();
-  
-  // 2. On force l'ID dans le formData en nettoyant bien le nom de la colonne
   formData[idColName.trim()] = nouvelId; 
   
-  // 3. Création de la ligne
   let nouvelleLigne = entetes.map(entete => {
     let nomColonnePropre = entete.toString().trim();
-    
-    // Si c'est la colonne de l'ID, on met obligatoirement le nouvel ID généré
     if (nomColonnePropre === idColName.trim()) {
       return nouvelId;
     }
-    
     return formData[nomColonnePropre] !== undefined ? formData[nomColonnePropre] : "";
   });
   
   feuille.appendRow(nouvelleLigne);
-  
-  return nouvelId; // Retourne l'ID créé
+  return nouvelId; 
 }
 
-// Mettre à jour une ligne existante (insensible aux espaces)
 function modifierEnregistrement(nomFeuille, rowIndex, formData) {
   const feuille = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nomFeuille);
   const entetes = feuille.getRange(1, 1, 1, feuille.getLastColumn()).getValues()[0];
@@ -61,21 +50,18 @@ function modifierEnregistrement(nomFeuille, rowIndex, formData) {
   return true;
 }
 
-// Supprimer une ligne
 function supprimerEnregistrement(nomFeuille, rowIndex) {
   const feuille = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(nomFeuille);
   feuille.deleteRow(rowIndex);
   return true;
 }
 
-// Chercher une ligne par Date avec détection dynamique de la colonne
 function rechercherEnregistrementParDate(nomFeuille, nomColonne, dateSearchStr) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const feuille = ss.getSheetByName(nomFeuille);
   const data = feuille.getDataRange().getValues();
   const entetes = data[0];
   
-  // 1. Détection dynamique de l'emplacement de la colonne
   let colIndex = -1;
   for (let c = 0; c < entetes.length; c++) {
     if (entetes[c].toString().trim() === nomColonne) {
@@ -84,14 +70,12 @@ function rechercherEnregistrementParDate(nomFeuille, nomColonne, dateSearchStr) 
     }
   }
   
-  // Si la colonne a changé de nom ou n'existe pas, on renvoie une erreur visible
   if (colIndex === -1) {
     return { erreurDebug: "La colonne '" + nomColonne + "' est introuvable dans la feuille." };
   }
 
   const timeZone = ss.getSpreadsheetTimeZone();
 
-  // 2. Recherche de la date
   for (let i = 1; i < data.length; i++) {
     let cellValue = data[i][colIndex];
     if (!cellValue) continue;
@@ -114,7 +98,6 @@ function rechercherEnregistrementParDate(nomFeuille, nomColonne, dateSearchStr) 
       let objetResultat = {};
       entetes.forEach((entete, index) => {
         let val = data[i][index];
-        // On s'assure que toutes les dates remontent proprement vers le formulaire
         if (Object.prototype.toString.call(val) === '[object Date]') {
           objetResultat[entete] = Utilities.formatDate(val, timeZone, "yyyy-MM-dd");
         } else {
@@ -124,11 +107,9 @@ function rechercherEnregistrementParDate(nomFeuille, nomColonne, dateSearchStr) 
       return { row: i + 1, data: objetResultat };
     }
   }
-  
-  return null; // Non trouvé
+  return null;
 }
 
-// Récupérer les informations de calendrier par index de colonne direct
 function getInfoCalendrierParDate(dateSearchStr) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const feuilleCal = ss.getSheetByName('cal_26-50');
@@ -137,7 +118,7 @@ function getInfoCalendrierParDate(dateSearchStr) {
   const data = feuilleCal.getDataRange().getValues();
   const displayData = feuilleCal.getDataRange().getDisplayValues();
   const timeZone = ss.getSpreadsheetTimeZone();
-  // Détection de la colonne "saison"
+  
   const entetes = data[0];
   let idxSaison = -1;
   for (let c = 0; c < entetes.length; c++) {
@@ -148,7 +129,7 @@ function getInfoCalendrierParDate(dateSearchStr) {
   }
   
   for (let i = 1; i < data.length; i++) {
-    let cellText = displayData[i][3].trim(); // Index 3 = Date Début (Samedi)
+    let cellText = displayData[i][3].trim(); 
     if (!cellText) continue;
     
     let datePart = cellText.split(' ')[0];
@@ -180,7 +161,7 @@ function getInfoCalendrierParDate(dateSearchStr) {
     
     if (formattedCellText === dateSearchStr) {
       let rowVals = data[i];
-      let dateFinVal = rowVals[4]; // Index 4 = Date Fin (Samedi)
+      let dateFinVal = rowVals[4]; 
       let dateFinStr = "";
       
       if (Object.prototype.toString.call(dateFinVal) === '[object Date]') {
@@ -190,17 +171,16 @@ function getInfoCalendrierParDate(dateSearchStr) {
       }
       
       return {
-        annee: rowVals[1],     // Index 1 = Année
-        semaine: rowVals[2],   // Index 2 = N° Semaine
-        dateFin: dateFinStr,   // Index 4 = Date Fin
-        saison: idxSaison !== -1 ? rowVals[idxSaison] : "" // <-- NOUVELLE LIGNE ICI
+        annee: rowVals[1],     
+        semaine: rowVals[2],   
+        dateFin: dateFinStr,   
+        saison: idxSaison !== -1 ? rowVals[idxSaison] : "" 
       };
     }
   }
   return null;
 }
 
-// Vérifier si une date de début existe déjà (anti-doublon)
 function dateExisteDeja(nomFeuille, nomColonne, dateSearchStr, currentRowIndex) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const feuille = ss.getSheetByName(nomFeuille);
@@ -219,7 +199,6 @@ function dateExisteDeja(nomFeuille, nomColonne, dateSearchStr, currentRowIndex) 
   const timeZone = ss.getSpreadsheetTimeZone();
 
   for (let i = 1; i < data.length; i++) {
-    // Si on est en train de modifier la ligne actuelle, on ignore sa propre ligne pour éviter le faux positif
     if (currentRowIndex && (i + 1) === parseInt(currentRowIndex)) continue;
 
     let cellValue = data[i][colIndex];
@@ -239,7 +218,7 @@ function dateExisteDeja(nomFeuille, nomColonne, dateSearchStr, currentRowIndex) 
     }
     
     if (dateStr === dateSearchStr) {
-      return true; // Trouvé ! C'est un doublon.
+      return true; 
     }
   }
   return false;

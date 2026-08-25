@@ -16,15 +16,12 @@ function traiterSauvegardeTarif(formData, rowIndex) {
   let dateDebut = formData['Date Début (Samedi)'];
   if (!dateDebut) return "ERREUR : La date de début est obligatoire.";
 
-  // Détection des doublons de dates
   let estUnDoublon = dateExisteDeja(CONFIG_TARIFS.feuille, CONFIG_TARIFS.colonneRechercheDate, dateDebut, rowIndex);
   if (estUnDoublon) {
     return "ERREUR : Un tarif existe déjà pour cette date de début (" + dateDebut + "). Impossible de créer un doublon.";
   }
 
-  // --- NOUVEAU : Exclusivité OT / Libre et calcul serveur ---
   let tarifOt = parseFloat(formData['tarif_ot']) || 0;
-  // Gère automatiquement tarif_libre ou tarifs_libres selon l'attribut name du HTML
   let nomChampLibre = formData.hasOwnProperty('tarifs_libres') ? 'tarifs_libres' : 'tarif_libre';
   let tarifLibre = parseFloat(formData[nomChampLibre]) || 0;
 
@@ -39,14 +36,13 @@ function traiterSauvegardeTarif(formData, rowIndex) {
     commission = tarifOt * 0.12;
     montantRestant = tarifOt - commission;
   } else if (tarifLibre > 0) {
-    commission = 0; // Aucune commission sur un tarif direct
+    commission = 0;
     montantRestant = tarifLibre;
   }
 
   formData['commission_ot'] = commission.toFixed(2);
   formData['montant_restant'] = montantRestant.toFixed(2);
 
-  // Remplissage automatique de l'Année, Semaine et Date Fin
   let infosCal = getInfoCalendrierParDate(dateDebut);
   if (infosCal) {
     if (!formData['Année']) formData['Année'] = infosCal.annee;
@@ -63,7 +59,6 @@ function traiterSauvegardeTarif(formData, rowIndex) {
   
   delete formData['num_semaine'];
 
-  // Enregistrement
   if (rowIndex) {
     modifierEnregistrement(CONFIG_TARIFS.feuille, rowIndex, formData);
     return "Modification effectuée avec succès.";
@@ -78,7 +73,6 @@ function traiterSuppressionTarif(rowIndex) {
   return "Suppression confirmée.";
 }
 
-// --- CONFIGURATION RÉSERVATIONS ---
 const CONFIG_RESA = {
   feuille: 'cal_reservation_26-50',
   nomId: 'ID_cal_reservation_26-50',
@@ -93,13 +87,11 @@ function traiterSauvegardeReservation(formData, rowIndex) {
   let dateDebut = formData['Date Début (Samedi)'];
   if (!dateDebut) return "ERREUR : La date de début est obligatoire.";
 
-  // 1. Détection des doublons (Une seule réservation par date de début)
   let estUnDoublon = dateExisteDeja(CONFIG_RESA.feuille, CONFIG_RESA.colonneRechercheDate, dateDebut, rowIndex);
   if (estUnDoublon) {
     return "ERREUR : Une réservation existe déjà pour la semaine du " + dateDebut + ".";
   }
 
-  // 2. Remplissage automatique (Année, Semaine, Date Fin)
   let infosCal = getInfoCalendrierParDate(dateDebut);
   if (infosCal) {
     if (!formData['Année']) formData['Année'] = infosCal.annee;
@@ -107,33 +99,25 @@ function traiterSauvegardeReservation(formData, rowIndex) {
     if (!numSem) formData['N° Semaine'] = infosCal.semaine;
     else formData['N° Semaine'] = numSem;
     if (!formData['Date Fin (Samedi)']) formData['Date Fin (Samedi)'] = infosCal.dateFin;
-    
-    // --- NOUVEAU : Sauvegarde automatique de la saison ---
     if (infosCal.saison) formData['saison'] = infosCal.saison; 
   }
   delete formData['num_semaine'];
 
-  // --- NOUVEAU : Récupération automatique de l'état ET de la saison depuis cal_station ---
   let infosStation = getInfosStationParDate(dateDebut);
   formData['etat_station'] = infosStation.etat;
   formData['saison'] = infosStation.saison;
 
-  // 3. LA RELATION MAGIQUE AVEC LES TARIFS
-  // On cherche si un tarif existe à cette même date dans l'autre feuille
   let tarifAssocie = rechercherEnregistrementParDate(CONFIG_TARIFS.feuille, CONFIG_TARIFS.colonneRechercheDate, dateDebut);
   if (tarifAssocie && tarifAssocie.data && tarifAssocie.data['ID_cal_tarifs_26-50']) {
     formData['ID_cal_tarifs_26-50'] = tarifAssocie.data['ID_cal_tarifs_26-50'];
   } else {
-    formData['ID_cal_tarifs_26-50'] = ""; // Aucun tarif lié
+    formData['ID_cal_tarifs_26-50'] = "";
   }
 
-  // 4. Enregistrement
   if (rowIndex) {
-    // CORRECTION : Si la ligne existante n'a pas d'ID, on lui en génère un
     if (!formData[CONFIG_RESA.nomId] || formData[CONFIG_RESA.nomId].toString().trim() === "") {
       formData[CONFIG_RESA.nomId] = genererIdUnique();
     }
-    
     modifierEnregistrement(CONFIG_RESA.feuille, rowIndex, formData);
     return "Modification de la réservation effectuée.";
   } else {
@@ -147,7 +131,6 @@ function traiterSuppressionReservation(rowIndex) {
   return "Réservation supprimée définitivement.";
 }
 
-// --- FONCTION POUR ALIMENTER LE MENU DÉROULANT ---
 function getOriginesReservation() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const feuilleListes = ss.getSheetByName('listes');
@@ -156,20 +139,15 @@ function getOriginesReservation() {
   const data = feuilleListes.getDataRange().getValues();
   let origines = [];
   
-  // On boucle à partir de 1 pour ignorer la ligne d'en-tête
   for (let i = 1; i < data.length; i++) {
-    // La colonne C correspond à l'index 2 (A=0, B=1, C=2)
     let val = data[i][2]; 
     if (val) {
       origines.push(val.toString().trim());
     }
   }
-  
-  // Retourne uniquement les valeurs uniques
   return [...new Set(origines)];
 }
 
-// --- NOUVEAU : Déduire l'état de la station ET la saison selon la date ---
 function getInfosStationParDate(dateSearchStr) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const feuilleStation = ss.getSheetByName('cal_station');
@@ -180,7 +158,7 @@ function getInfosStationParDate(dateSearchStr) {
   const entetes = data[0];
 
   let idxOuverture = -1, idxFermeture = -1, idxEtat = -1;
-  let idxSaison = 5; // On force la lecture sur la Colonne F (index 5)
+  let idxSaison = 5; 
 
   for (let c = 0; c < entetes.length; c++) {
     let nomCol = entetes[c].toString().trim();
@@ -207,11 +185,9 @@ function getInfosStationParDate(dateSearchStr) {
     dateO.setHours(0,0,0,0);
     dateF.setHours(0,0,0,0);
 
-    // Si la date est dans la période, on renvoie l'état ET la saison (colonne F)
     if (targetDate >= dateO && targetDate <= dateF) {
       let etatTrouve = idxEtat !== -1 ? data[i][idxEtat].toString().trim() : "Fermée";
       let saisonTrouvee = data[i][idxSaison] ? data[i][idxSaison].toString().trim() : "";
-      
       return { etat: etatTrouve, saison: saisonTrouvee };
     }
   }

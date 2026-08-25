@@ -60,12 +60,13 @@
         </div>
         <div class="form-group">
           <label>État Station :</label>
-          <input type="text" id="etat_station" name="etat_station" placeholder="ouverte / fermee">
+          <!-- CORRECTION : Ajout du verrouillage readonly pour éviter la saisie manuelle -->
+          <input type="text" id="etat_station" name="etat_station" placeholder="Calcul automatique..." readonly class="readonly-input">
         </div>
         <div class="form-group">
-  <label>Saison :</label>
-  <input type="text" id="saison" name="saison" placeholder="Calcul automatique..." readonly class="readonly-input">
-</div>
+          <label>Saison :</label>
+          <input type="text" id="saison" name="saison" placeholder="Calcul automatique..." readonly class="readonly-input">
+        </div>
       </div>
       
       <div class="actions">

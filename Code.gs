@@ -14,7 +14,6 @@ function afficherInterfaceTarifs() {
 }
 
 function afficherInterfaceResa() {
-  // Charge un nouveau fichier que nous allons créer : Resa.html
   const html = HtmlService.createTemplateFromFile('Resa')
       .evaluate()
       .setWidth(600).setHeight(550);

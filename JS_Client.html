@@ -3,7 +3,6 @@
     document.getElementById('messageBox').innerHTML = '<b>' + msg + '</b>';
   }
 
-  // --- NOUVEAU : Bloquer la saisie simultanée et adapter la commission ---
   function gererSaisieTarif(source) {
     let inputOt = document.getElementById('tarif_ot');
     let inputLibre = document.getElementById('tarif_libre');
@@ -13,14 +12,14 @@
     if (source === 'ot') {
       if (inputOt.value !== "" && parseFloat(inputOt.value) > 0) {
         inputLibre.value = "";
-        inputLibre.disabled = true; // Grise le champ Tarif Libre
+        inputLibre.disabled = true; 
         
         let tarif = parseFloat(inputOt.value);
-        let comm = tarif * 0.12; // Applique 12% de commission
+        let comm = tarif * 0.12; 
         commission.value = comm.toFixed(2);
         restant.value = (tarif - comm).toFixed(2);
       } else {
-        inputLibre.disabled = false; // Dégrise si on efface la case
+        inputLibre.disabled = false; 
         commission.value = "";
         restant.value = "";
       }
@@ -28,13 +27,13 @@
     else if (source === 'libre') {
       if (inputLibre.value !== "" && parseFloat(inputLibre.value) > 0) {
         inputOt.value = "";
-        inputOt.disabled = true; // Grise le champ Tarif OT
+        inputOt.disabled = true; 
         
-        commission.value = "0.00"; // Pas de commission sur un tarif libre
+        commission.value = "0.00"; 
         let tarif = parseFloat(inputLibre.value);
         restant.value = tarif.toFixed(2);
       } else {
-        inputOt.disabled = false; // Dégrise si on efface la case
+        inputOt.disabled = false; 
         commission.value = "";
         restant.value = "";
       }
@@ -68,7 +67,6 @@
       let inputOt = document.getElementById('tarif_ot');
       let inputLibre = document.getElementById('tarif_libre');
 
-      // Réinitialiser les blocages avant de remplir
       inputOt.disabled = false;
       inputLibre.disabled = false;
 
@@ -84,7 +82,6 @@
         let tarifOtVal = parseFloat(resultat.data['tarif_ot']);
         inputOt.value = !isNaN(tarifOtVal) ? tarifOtVal.toFixed(2) : "";
         
-        // On vérifie les deux noms possibles au cas où vous auriez mis un 's'
         let tarifLibreVal = parseFloat(resultat.data['tarif_libre'] || resultat.data['tarifs_libres']);
         inputLibre.value = !isNaN(tarifLibreVal) ? tarifLibreVal.toFixed(2) : "";
         
@@ -97,7 +94,6 @@
         document.getElementById('btnDelete').style.display = "inline-block";
         afficherMessage("Tarif trouvé ! Vous pouvez le modifier ou le supprimer.");
 
-        // On déclenche la vérification pour griser la bonne case
         if (inputOt.value && parseFloat(inputOt.value) > 0) gererSaisieTarif('ot');
         else if (inputLibre.value && parseFloat(inputLibre.value) > 0) gererSaisieTarif('libre');
 
@@ -188,7 +184,6 @@
         document.getElementById('semaine').value = infos.semaine;
         document.getElementById('Date Fin (Samedi)').value = infos.dateFin;
         
-        // --- NOUVEAU : Remplir la case saison ---
         if (document.getElementById('saison')) {
           document.getElementById('saison').value = infos.saison || "";
         }
