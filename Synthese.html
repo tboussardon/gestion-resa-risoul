@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('CSS'); ?>
+    <style>
+      .kpi-container {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+      .kpi-card {
+        flex: 1;
+        background: #ffffff;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+        padding: 10px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      }
+      .kpi-card h4 {
+        margin: 0;
+        font-size: 11px;
+        color: #7f8c8d;
+        text-transform: uppercase;
+      }
+      .kpi-card .valeur {
+        font-size: 18px;
+        font-weight: bold;
+        color: #2c3e50;
+        margin-top: 5px;
+      }
+      .table-container {
+  max-height: 480px; /* Augmenté de 280px à 480px pour afficher plus de lignes */
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background: white;
+}
+      table.synthese-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+      }
+      table.synthese-table th, table.synthese-table td {
+        padding: 8px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+      }
+      table.synthese-table th {
+        background-color: #3498db;
+        color: white;
+        position: sticky;
+        top: 0;
+      }
+      table.synthese-table tr:hover {
+        background-color: #f5f5f5;
+      }
+      .number-col {
+        text-align: right !important;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>Synthèse & Rapports des Réservations</h2>
+    
+    <!-- SECTION FILTRES -->
+    <div class="section">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Année :</label>
+          <select id="f_annee" onchange="chargerSynthese()">
+            <option value="">Toutes</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Saison :</label>
+          <select id="f_saison" onchange="chargerSynthese()">
+            <option value="">Toutes</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Origine :</label>
+          <select id="f_origine" onchange="chargerSynthese()">
+            <option value="">Toutes</option>
+          </select>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Conciergerie :</label>
+          <select id="f_conciergerie" onchange="chargerSynthese()">
+            <option value="">Toutes</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>État Station :</label>
+          <select id="f_etat_station" onchange="chargerSynthese()">
+            <option value="">Tous</option>
+            <option value="Ouverte">Ouverte</option>
+            <option value="Fermée">Fermée</option>
+          </select>
+        </div>
+        <div class="form-group" style="display: flex; align-items: flex-end;">
+          <button type="button" onclick="reinitialiserFiltres()" class="danger">Réinitialiser</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARTE DE KPIS -->
+    <div class="kpi-container">
+      <div class="kpi-card">
+        <h4>Réservations</h4>
+        <div id="kpi_count" class="valeur">0</div>
+      </div>
+      <div class="kpi-card">
+        <h4>CA Brut Total</h4>
+        <div id="kpi_brut" class="valeur">0.00 €</div>
+      </div>
+      <div class="kpi-card">
+        <h4>Commissions OT</h4>
+        <div id="kpi_comm" class="valeur">0.00 €</div>
+      </div>
+      <div class="kpi-card">
+        <h4>Net Restant</h4>
+        <div id="kpi_net" class="valeur" style="color: #27ae60;">0.00 €</div>
+      </div>
+    </div>
+
+    <!-- TABLEAU DE SYNTHÈSE -->
+    <div class="table-container">
+      <table class="synthese-table">
+        <thead>
+          <tr>
+            <th>Sem.</th>
+            <th>Début</th>
+            <th>Client</th>
+            <th>Origine</th>
+            <th>Conciergerie</th>
+            <th>Saison</th>
+            <th>Station</th>
+            <th class="number-col">Brut (€)</th>
+            <th class="number-col">Comm. (€)</th>
+            <th class="number-col">Net (€)</th>
+          </tr>
+        </thead>
+        <tbody id="corpsTableau">
+          <tr><td colspan="10" style="text-align: center;">Chargement des données...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div id="messageBox"></div>
+
+    <?!= include('JS_Synthese'); ?>
+  </body>
+</html>

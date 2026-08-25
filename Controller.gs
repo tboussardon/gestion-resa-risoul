@@ -338,3 +338,142 @@ function getInfosStationParDate(dateSearchStr) {
   
   return { etat: "Fermée", saison: "" };
 }
+
+/**
+ * Récupère les données croisées et filtrées (Réservations + Tarifs)
+ */
+function obtenirDonneesSynthese(filtres) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const fResa = ss.getSheetByName('cal_reservation_26-50');
+  const fTarifs = ss.getSheetByName('cal_tarifs_26-50');
+  
+  if (!fResa) return { erreur: "Feuille 'cal_reservation_26-50' introuvable." };
+  
+  const dataResa = fResa.getDataRange().getValues();
+  if (dataResa.length < 2) {
+    return { kpis: { count: 0, totalBrut: "0.00", totalComm: "0.00", totalNet: "0.00" }, lignes: [] };
+  }
+  
+  const entetesResa = dataResa[0].map(e => e.toString().trim());
+  
+  // Indexation des tarifs par leur ID
+  let mapTarifs = {};
+  if (fTarifs) {
+    const dataTarifs = fTarifs.getDataRange().getValues();
+    if (dataTarifs.length > 1) {
+      const entetesTarifs = dataTarifs[0].map(e => e.toString().trim());
+      const idxIdTarif = entetesTarifs.indexOf('ID_cal_tarifs_26-50');
+      const idxOt = entetesTarifs.indexOf('tarif_ot');
+      const idxLibre = entetesTarifs.indexOf('tarif_libre') !== -1 ? entetesTarifs.indexOf('tarif_libre') : entetesTarifs.indexOf('tarifs_libres');
+      const idxComm = entetesTarifs.indexOf('commission_ot');
+      const idxRestant = entetesTarifs.indexOf('montant_restant');
+
+      for (let i = 1; i < dataTarifs.length; i++) {
+        let idT = dataTarifs[i][idxIdTarif];
+        if (idT) {
+          let ot = parseFloat(dataTarifs[i][idxOt]) || 0;
+          let libre = parseFloat(dataTarifs[i][idxLibre]) || 0;
+          let brut = ot > 0 ? ot : libre;
+          let comm = parseFloat(dataTarifs[i][idxComm]) || 0;
+          let net = parseFloat(dataTarifs[i][idxRestant]) || 0;
+          
+          mapTarifs[idT] = { brut: brut, comm: comm, net: net };
+        }
+      }
+    }
+  }
+
+  const idxAnnee = entetesResa.indexOf('Année');
+  const idxSemaine = entetesResa.indexOf('N° Semaine');
+  const idxDebut = entetesResa.indexOf('Date Début (Samedi)');
+  const idxFin = entetesResa.indexOf('Date Fin (Samedi)');
+  const idxNom = entetesResa.indexOf('nom');
+  const idxPrenom = entetesResa.indexOf('prenom');
+  const idxOrigine = entetesResa.indexOf('origine_reservation');
+  const idxEtatStation = entetesResa.indexOf('etat_station');
+  const idxSaison = entetesResa.indexOf('saison');
+  const idxConciergerie = entetesResa.indexOf('conciergerie');
+  const idxIdTarifResa = entetesResa.indexOf('ID_cal_tarifs_26-50');
+
+  let resultats = [];
+  let totalBrutNum = 0, totalCommNum = 0, totalNetNum = 0;
+
+  const timeZone = ss.getSpreadsheetTimeZone();
+  const formatteDate = (val) => {
+    if (Object.prototype.toString.call(val) === '[object Date]') {
+      return Utilities.formatDate(val, timeZone, "yyyy-MM-dd");
+    }
+    return val ? val.toString().substring(0, 10) : "";
+  };
+
+  for (let i = 1; i < dataResa.length; i++) {
+    let row = dataResa[i];
+    
+    let annee = row[idxAnnee] ? row[idxAnnee].toString().trim() : "";
+    let saison = row[idxSaison] ? row[idxSaison].toString().trim() : "";
+    let origine = row[idxOrigine] ? row[idxOrigine].toString().trim() : "";
+    let conciergerie = row[idxConciergerie] ? row[idxConciergerie].toString().trim() : "";
+    let etatStation = row[idxEtatStation] ? row[idxEtatStation].toString().trim() : "";
+    
+    // Application des filtres
+    if (filtres.annee && annee !== filtres.annee) continue;
+    if (filtres.saison && saison !== filtres.saison) continue;
+    if (filtres.origine && origine !== filtres.origine) continue;
+    if (filtres.conciergerie && conciergerie !== filtres.conciergerie) continue;
+    if (filtres.etatStation && etatStation !== filtres.etatStation) continue;
+
+    let idTarifAssocie = idxIdTarifResa !== -1 ? row[idxIdTarifResa] : "";
+    let infoTarif = mapTarifs[idTarifAssocie] || { brut: 0, comm: 0, net: 0 };
+
+    totalBrutNum += infoTarif.brut;
+    totalCommNum += infoTarif.comm;
+    totalNetNum += infoTarif.net;
+
+    resultats.push({
+      annee: annee,
+      semaine: row[idxSemaine] || "",
+      dateDebut: formatteDate(row[idxDebut]),
+      dateFin: formatteDate(row[idxFin]),
+      client: ((row[idxNom] || "") + " " + (row[idxPrenom] || "")).trim(),
+      origine: origine,
+      conciergerie: conciergerie,
+      saison: saison,
+      etatStation: etatStation,
+      tarifBrut: infoTarif.brut.toFixed(2),
+      commission: infoTarif.comm.toFixed(2),
+      montantNet: infoTarif.net.toFixed(2)
+    });
+  }
+
+  return {
+    kpis: {
+      count: resultats.length,
+      totalBrut: totalBrutNum.toFixed(2),
+      totalComm: totalCommNum.toFixed(2),
+      totalNet: totalNetNum.toFixed(2)
+    },
+    lignes: resultats
+  };
+}
+
+/**
+ * Récupère les années enregistrées pour alimenter la liste déroulante
+ */
+function getAnneesSynthese() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const fResa = ss.getSheetByName('cal_reservation_26-50');
+  if (!fResa) return [];
+  const data = fResa.getDataRange().getValues();
+  if (data.length < 2) return [];
+  
+  const entetes = data[0].map(e => e.toString().trim());
+  const idxAnnee = entetes.indexOf('Année');
+  if (idxAnnee === -1) return [];
+
+  let annees = [];
+  for (let i = 1; i < data.length; i++) {
+    let a = data[i][idxAnnee];
+    if (a) annees.push(a.toString().trim());
+  }
+  return [...new Set(annees)].sort();
+}

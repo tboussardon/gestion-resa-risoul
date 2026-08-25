@@ -1,0 +1,108 @@
+<script>
+  function afficherMessage(msg) {
+    document.getElementById('messageBox').innerHTML = '<b>' + msg + '</b>';
+  }
+
+  function alimenterSelect(idSelect, liste) {
+    const select = document.getElementById(idSelect);
+    select.innerHTML = '<option value="">Toutes</option>';
+    liste.forEach(function(item) {
+      if (item) {
+        let opt = document.createElement('option');
+        opt.value = item;
+        opt.text = item;
+        select.appendChild(opt);
+      }
+    });
+  }
+
+  function initialiserFormulaire() {
+    // Chargement des Années
+    google.script.run.withSuccessHandler(function(annees) {
+      alimenterSelect('f_annee', annees);
+    }).getAnneesSynthese();
+
+    // Chargement des Saisons (Colonne D feuille listes)
+    google.script.run.withSuccessHandler(function(saisons) {
+      alimenterSelect('f_saison', saisons);
+    }).getSaisonsStation();
+
+    // Chargement des Origines (Colonne C feuille listes)
+    google.script.run.withSuccessHandler(function(origines) {
+      alimenterSelect('f_origine', origines);
+    }).getOriginesReservation();
+
+    // Chargement des Conciergeries (Colonne A feuille listes)
+    google.script.run.withSuccessHandler(function(conciergeries) {
+      alimenterSelect('f_conciergerie', conciergeries);
+    }).getConciergeries();
+
+    chargerSynthese();
+  }
+
+  function chargerSynthese() {
+    let filtres = {
+      annee: document.getElementById('f_annee').value,
+      saison: document.getElementById('f_saison').value,
+      origine: document.getElementById('f_origine').value,
+      conciergerie: document.getElementById('f_conciergerie').value,
+      etatStation: document.getElementById('f_etat_station').value
+    };
+
+    afficherMessage("Actualisation des données...");
+
+    google.script.run.withSuccessHandler(function(reponse) {
+      if (reponse.erreur) {
+        afficherMessage("<span style='color:red'>" + reponse.erreur + "</span>");
+        return;
+      }
+
+      // Mise à jour des cartes KPI
+      document.getElementById('kpi_count').innerText = reponse.kpis.count;
+      document.getElementById('kpi_brut').innerText = reponse.kpis.totalBrut + " €";
+      document.getElementById('kpi_comm').innerText = reponse.kpis.totalComm + " €";
+      document.getElementById('kpi_net').innerText = reponse.kpis.totalNet + " €";
+
+      // Mise à jour du tableau
+      const tbody = document.getElementById('corpsTableau');
+      tbody.innerHTML = "";
+
+      if (reponse.lignes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">Aucune réservation trouvée pour ces filtres.</td></tr>';
+        afficherMessage("");
+        return;
+      }
+
+      reponse.lignes.forEach(function(l) {
+        let tr = document.createElement('tr');
+        tr.innerHTML = 
+          '<td>' + l.semaine + '</td>' +
+          '<td>' + l.dateDebut + '</td>' +
+          '<td>' + l.client + '</td>' +
+          '<td>' + l.origine + '</td>' +
+          '<td>' + l.conciergerie + '</td>' +
+          '<td>' + l.saison + '</td>' +
+          '<td>' + l.etatStation + '</td>' +
+          '<td class="number-col">' + l.tarifBrut + '</td>' +
+          '<td class="number-col">' + l.commission + '</td>' +
+          '<td class="number-col"><b>' + l.montantNet + '</b></td>';
+        tbody.appendChild(tr);
+      });
+
+      afficherMessage("");
+    }).obtenirDonneesSynthese(filtres);
+  }
+
+  function reinitialiserFiltres() {
+    document.getElementById('f_annee').value = "";
+    document.getElementById('f_saison').value = "";
+    document.getElementById('f_origine').value = "";
+    document.getElementById('f_conciergerie').value = "";
+    document.getElementById('f_etat_station').value = "";
+    chargerSynthese();
+  }
+
+  window.onload = function() {
+    initialiserFormulaire();
+  };
+</script>

@@ -3,22 +3,31 @@ function onOpen() {
     .createMenu('Gestion Risoul')
     .addItem('💰 Gérer les Tarifs', 'afficherInterfaceTarifs')
     .addItem('📅 Gérer les Réservations', 'afficherInterfaceResa')
-    .addItem('🏔️ Gérer la Station', 'afficherInterfaceStation') // NOUVEAU
+    .addItem('🏔️ Gérer la Station', 'afficherInterfaceStation')
+    .addSeparator()
+    .addItem('📊 Synthèse & Rapports', 'afficherInterfaceSynthese') // NOUVEAU
     .addToUi();
 }
 
-function afficherInterfaceTarifs() {
-  const html = HtmlService.createTemplateFromFile('Index')
+function afficherInterfaceSynthese() {
+  const html = HtmlService.createTemplateFromFile('Synthese')
       .evaluate()
-      .setWidth(600).setHeight(550);
-  SpreadsheetApp.getUi().showModalDialog(html, 'Gestion des Tarifs');
+      .setWidth(1250).setHeight(820);
+  SpreadsheetApp.getUi().showModalDialog(html, '📊 Synthèse & Rapports');
+}
+
+function afficherInterfaceTarifs() {
+  const html = HtmlService.createTemplateFromFile('Tarifs')
+      .evaluate()
+      .setWidth(1150).setHeight(750);
+  SpreadsheetApp.getUi().showModalDialog(html, '💰 Gérer les Tarifs');
 }
 
 function afficherInterfaceResa() {
   const html = HtmlService.createTemplateFromFile('Resa')
       .evaluate()
-      .setWidth(600).setHeight(550);
-  SpreadsheetApp.getUi().showModalDialog(html, 'Gestion des Réservations');
+      .setWidth(1150).setHeight(750);
+  SpreadsheetApp.getUi().showModalDialog(html, '📅 Gérer les Réservations');
 }
 
 function include(filename) {
@@ -43,9 +52,9 @@ function getConciergeries() {
   return [...new Set(conciergeries)]; // Déduplication
 }
 
-function afficherInterfaceStation() {
-  const html = HtmlService.createTemplateFromFile('Station')
+function afficherInterfaceResa() {
+  const html = HtmlService.createTemplateFromFile('Resa')
       .evaluate()
-      .setWidth(600).setHeight(550);
-  SpreadsheetApp.getUi().showModalDialog(html, 'Gestion des Périodes Station');
+      .setWidth(1150).setHeight(750);
+  SpreadsheetApp.getUi().showModalDialog(html, '📅 Gérer les Réservations');
 }
