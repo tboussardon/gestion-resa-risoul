@@ -1,0 +1,146 @@
+<script>
+  function afficherMessage(msg) {
+    document.getElementById('messageBox').innerHTML = '<b>' + msg + '</b>';
+  }
+
+  function chercherReservation() {
+    const dateSaisie = document.getElementById('searchDate').value;
+    if(!dateSaisie) {
+      afficherMessage("Veuillez sélectionner une date."); return;
+    }
+    
+    afficherMessage("Recherche en cours...");
+    
+    google.script.run.withSuccessHandler(function(resultat) {
+      if(resultat && resultat.erreurDebug) {
+        afficherMessage("<span style='color:red'>" + resultat.erreurDebug + "</span>"); return;
+      }
+      if(resultat && resultat.row) {
+        document.getElementById('rowIndex').value = resultat.row;
+        document.getElementById('ID_cal_reservation_26-50').value = resultat.data['ID_cal_reservation_26-50'] || "";
+        document.getElementById('ID_cal_tarifs_26-50').value = resultat.data['ID_cal_tarifs_26-50'] || "";
+        
+        document.getElementById('Année').value = resultat.data['Année'] || "";
+        document.getElementById('semaine').value = resultat.data['N° Semaine'] || "";
+        document.getElementById('Date Début (Samedi)').value = resultat.data['Date Début (Samedi)'];
+        document.getElementById('Date Fin (Samedi)').value = resultat.data['Date Fin (Samedi)'];
+        
+        document.getElementById('nom').value = resultat.data['nom'] || "";
+        document.getElementById('prenom').value = resultat.data['prenom'] || "";
+        document.getElementById('origine_reservation').value = resultat.data['origine_reservation'] || "";
+        document.getElementById('etat_station').value = resultat.data['etat_station'] || "";
+        if (document.getElementById('saison')) {
+            let saisonTrouvee = resultat.data['saison'] || "";
+            document.getElementById('saison').value = saisonTrouvee;
+            
+            // Si la vieille réservation n'avait pas de saison, on la déduit avec cal_station
+            if (saisonTrouvee === "") {
+                google.script.run.withSuccessHandler(function(infos) {
+                    if (infos && infos.saison) {
+                        document.getElementById('saison').value = infos.saison;
+                    }
+                }).getInfosStationParDate(document.getElementById('Date Début (Samedi)').value);
+            }
+        }
+        
+        document.getElementById('btnDelete').style.display = "inline-block";
+        afficherMessage("Réservation trouvée !");
+      } else {
+        document.getElementById('resaForm').reset();
+        document.getElementById('Date Début (Samedi)').value = dateSaisie; 
+        document.getElementById('rowIndex').value = ""; 
+        document.getElementById('btnDelete').style.display = "none";
+        verifierEtRemplirCalendrier();
+        afficherMessage("Semaine libre. Vous pouvez créer une réservation.");
+      }
+    }).traiterRechercheReservation(dateSaisie);
+  }
+
+  function sauvegarderReservation() {
+    const dateDebutVal = document.getElementById('Date Début (Samedi)').value;
+    if (!dateDebutVal) {
+      afficherMessage("<span style='color:red'>Veuillez renseigner une date de début.</span>"); return;
+    }
+
+    let dateObj = new Date(dateDebutVal + 'T00:00:00');
+    if (dateObj.getDay() !== 6) {
+      afficherMessage("<span style='color:red'>❌ Erreur : La date de début doit être un samedi !</span>"); return;
+    }
+
+    const form = document.getElementById('resaForm');
+    let formData = {};
+    for (let i = 0; i < form.elements.length; i++) {
+      let element = form.elements[i];
+      if (element.name) formData[element.name] = element.value;
+    }
+    
+    const rowIndex = document.getElementById('rowIndex').value;
+    
+    afficherMessage("Sauvegarde en cours...");
+    google.script.run.withSuccessHandler(function(msg) {
+      if (msg.startsWith("ERREUR")) afficherMessage("<span style='color:red'>" + msg + "</span>");
+      else {
+        afficherMessage("<span style='color:green'>" + msg + "</span>");
+        document.getElementById('btnDelete').style.display = "none";
+      }
+    }).traiterSauvegardeReservation(formData, rowIndex);
+  }
+
+  function confirmerSuppression() {
+    if (confirm("Supprimer définitivement cette réservation ?")) {
+       const rowIndex = document.getElementById('rowIndex').value;
+       afficherMessage("Suppression en cours...");
+       google.script.run.withSuccessHandler(function(msg) {
+         afficherMessage(msg);
+         document.getElementById('resaForm').reset();
+         document.getElementById('btnDelete').style.display = "none";
+       }).traiterSuppressionReservation(rowIndex);
+    }
+  }
+
+  // Même logique autonome de calendrier que pour les tarifs
+  function verifierEtRemplirCalendrier() {
+    const dateDebut = document.getElementById('Date Début (Samedi)').value;
+    if (!dateDebut) return;
+    
+    let parts = dateDebut.split('-');
+    document.getElementById('Année').value = parts[0];
+    
+    let d = new Date(dateDebut);
+    d.setDate(d.getDate() + 7);
+    document.getElementById('Date Fin (Samedi)').value = d.toISOString().split('T')[0];
+    
+    let targetDate = new Date(dateDebut);
+    let janFirst = new Date(targetDate.getFullYear(), 0, 1);
+    let days = Math.floor((targetDate - janFirst) / (24 * 60 * 60 * 1000));
+    let semaineNum = Math.ceil((days + janFirst.getDay() + 1) / 7);
+    document.getElementById('semaine').value = semaineNum > 52 ? 52 : semaineNum;
+    
+    // --- Remplissage en direct de l'état de la station ET de la saison ---
+    google.script.run.withSuccessHandler(function(infos) {
+      document.getElementById('etat_station').value = infos.etat;
+      if (document.getElementById('saison')) {
+        document.getElementById('saison').value = infos.saison;
+      }
+    }).getInfosStationParDate(dateDebut);
+
+    // --- NOUVEAU : Remplissage en direct de l'état de la station ---
+    google.script.run.withSuccessHandler(function(etat) {
+      document.getElementById('etat_station').value = etat;
+    }).getEtatStationParDate(dateDebut);
+  }
+
+  // Exécuté automatiquement à l'ouverture de la fenêtre des réservations
+  window.onload = function() {
+    google.script.run.withSuccessHandler(function(origines) {
+      const select = document.getElementById('origine_reservation');
+      // On injecte chaque origine trouvée dans la feuille "listes" comme nouvelle option
+      origines.forEach(function(org) {
+        let option = document.createElement('option');
+        option.value = org;
+        option.text = org;
+        select.appendChild(option);
+      });
+    }).getOriginesReservation();
+  };
+</script>
