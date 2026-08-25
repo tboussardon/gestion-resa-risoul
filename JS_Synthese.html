@@ -62,6 +62,7 @@
       document.getElementById('kpi_brut').innerText = reponse.kpis.totalBrut + " €";
       document.getElementById('kpi_comm').innerText = reponse.kpis.totalComm + " €";
       document.getElementById('kpi_net').innerText = reponse.kpis.totalNet + " €";
+      document.getElementById('kpiTotalLibre').innerText = (reponse.kpis.totalLibre || "0.00") + " €";
 
       // Mise à jour du tableau
       const tbody = document.getElementById('corpsTableau');

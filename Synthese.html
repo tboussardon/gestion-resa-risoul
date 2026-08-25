@@ -31,12 +31,12 @@
         margin-top: 5px;
       }
       .table-container {
-  max-height: 480px; /* Augmenté de 280px à 480px pour afficher plus de lignes */
-  overflow-y: auto;
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  background: white;
-}
+        max-height: 480px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        background: white;
+      }
       table.synthese-table {
         width: 100%;
         border-collapse: collapse;
@@ -98,7 +98,7 @@
           <label>État Station :</label>
           <select id="f_etat_station" onchange="chargerSynthese()">
             <option value="">Tous</option>
-            <option value="Ouverte">Ouverte</option>
+            <option value="ouverte">ouverte</option>
             <option value="Fermée">Fermée</option>
           </select>
         </div>
@@ -125,6 +125,10 @@
       <div class="kpi-card">
         <h4>Net Restant</h4>
         <div id="kpi_net" class="valeur" style="color: #27ae60;">0.00 €</div>
+      </div>
+      <div class="kpi-card">
+        <h4>Total Tarifs Libres</h4>
+        <div id="kpiTotalLibre" class="valeur">0.00 €</div>
       </div>
     </div>
 

@@ -9,6 +9,13 @@ function onOpen() {
     .addToUi();
 }
 
+function afficherInterfaceStation() {
+  const html = HtmlService.createTemplateFromFile('Station')
+      .evaluate()
+      .setWidth(1150).setHeight(750);
+  SpreadsheetApp.getUi().showModalDialog(html, '🏔️ Gérer la Station');
+}
+
 function afficherInterfaceSynthese() {
   const html = HtmlService.createTemplateFromFile('Synthese')
       .evaluate()
@@ -50,11 +57,4 @@ function getConciergeries() {
     }
   }
   return [...new Set(conciergeries)]; // Déduplication
-}
-
-function afficherInterfaceResa() {
-  const html = HtmlService.createTemplateFromFile('Resa')
-      .evaluate()
-      .setWidth(1150).setHeight(750);
-  SpreadsheetApp.getUi().showModalDialog(html, '📅 Gérer les Réservations');
 }
