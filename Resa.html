@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= include('CSS'); ?> 
+  </head>
+  <body>
+    <h2>Gestion des Réservations</h2>
+    
+    <div class="section search-box">
+      <label for="searchDate" style="margin:0; min-width: 200px;">Rechercher par date de début :</label>
+      <input type="date" id="searchDate">
+      <button type="button" onclick="chercherReservation()">Rechercher</button>
+    </div>
+    
+    <form id="resaForm" class="section">
+      <input type="hidden" id="rowIndex" name="rowIndex">
+      <input type="hidden" id="ID_cal_reservation_26-50" name="ID_cal_reservation_26-50">
+      <input type="hidden" id="ID_cal_tarifs_26-50" name="ID_cal_tarifs_26-50">
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Année :</label>
+          <input type="number" id="Année" name="Année">
+        </div>
+        <div class="form-group">
+          <label>N° Semaine :</label>
+          <input type="number" id="semaine" name="num_semaine">
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date Début (Samedi) :</label>
+          <input type="date" id="Date Début (Samedi)" name="Date Début (Samedi)" onchange="verifierEtRemplirCalendrier()">
+        </div>
+        <div class="form-group">
+          <label>Date Fin (Samedi) :</label>
+          <input type="date" id="Date Fin (Samedi)" name="Date Fin (Samedi)">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nom :</label>
+          <input type="text" id="nom" name="nom" placeholder="Nom du client">
+        </div>
+        <div class="form-group">
+          <label>Prénom :</label>
+          <input type="text" id="prenom" name="prenom" placeholder="Prénom du client">
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Origine Réservation :</label>
+          <select id="origine_reservation" name="origine_reservation">
+            <option value="">-- Sélectionner --</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>État Station :</label>
+          <input type="text" id="etat_station" name="etat_station" placeholder="ouverte / fermee">
+        </div>
+        <div class="form-group">
+  <label>Saison :</label>
+  <input type="text" id="saison" name="saison" placeholder="Calcul automatique..." readonly class="readonly-input">
+</div>
+      </div>
+      
+      <div class="actions">
+        <button type="button" onclick="sauvegarderReservation()">Enregistrer la Réservation</button>
+        <button type="button" id="btnDelete" class="danger" style="display:none;" onclick="confirmerSuppression()">Supprimer</button>
+      </div>
+    </form>
+    
+    <div id="messageBox"></div>
+
+    <?!= include('JS_Resa'); ?>
+  </body>
+</html>

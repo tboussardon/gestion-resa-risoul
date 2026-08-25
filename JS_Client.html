@@ -1,0 +1,198 @@
+<script>
+  function afficherMessage(msg) {
+    document.getElementById('messageBox').innerHTML = '<b>' + msg + '</b>';
+  }
+
+  // --- NOUVEAU : Bloquer la saisie simultanée et adapter la commission ---
+  function gererSaisieTarif(source) {
+    let inputOt = document.getElementById('tarif_ot');
+    let inputLibre = document.getElementById('tarif_libre');
+    let commission = document.getElementById('commission_ot');
+    let restant = document.getElementById('montant_restant');
+
+    if (source === 'ot') {
+      if (inputOt.value !== "" && parseFloat(inputOt.value) > 0) {
+        inputLibre.value = "";
+        inputLibre.disabled = true; // Grise le champ Tarif Libre
+        
+        let tarif = parseFloat(inputOt.value);
+        let comm = tarif * 0.12; // Applique 12% de commission
+        commission.value = comm.toFixed(2);
+        restant.value = (tarif - comm).toFixed(2);
+      } else {
+        inputLibre.disabled = false; // Dégrise si on efface la case
+        commission.value = "";
+        restant.value = "";
+      }
+    } 
+    else if (source === 'libre') {
+      if (inputLibre.value !== "" && parseFloat(inputLibre.value) > 0) {
+        inputOt.value = "";
+        inputOt.disabled = true; // Grise le champ Tarif OT
+        
+        commission.value = "0.00"; // Pas de commission sur un tarif libre
+        let tarif = parseFloat(inputLibre.value);
+        restant.value = tarif.toFixed(2);
+      } else {
+        inputOt.disabled = false; // Dégrise si on efface la case
+        commission.value = "";
+        restant.value = "";
+      }
+    }
+  }
+
+  function calculerMontantManuel() {
+    let tarifOt = parseFloat(document.getElementById('tarif_ot').value) || 0;
+    let tarifLibre = parseFloat(document.getElementById('tarif_libre').value) || 0;
+    let comm = parseFloat(document.getElementById('commission_ot').value) || 0;
+    
+    let tarifActif = tarifOt > 0 ? tarifOt : tarifLibre;
+    document.getElementById('montant_restant').value = (tarifActif - comm).toFixed(2);
+  }
+
+  function chercherTarif() {
+    const dateSaisie = document.getElementById('searchDate').value;
+    if(!dateSaisie) {
+      afficherMessage("Veuillez sélectionner une date de début pour rechercher.");
+      return;
+    }
+    
+    afficherMessage("Recherche en cours pour la date : " + dateSaisie + "...");
+    
+    google.script.run.withSuccessHandler(function(resultat) {
+      if(resultat && resultat.erreurDebug) {
+        afficherMessage("<span style='color:red'>" + resultat.erreurDebug + "</span>");
+        return;
+      }
+      
+      let inputOt = document.getElementById('tarif_ot');
+      let inputLibre = document.getElementById('tarif_libre');
+
+      // Réinitialiser les blocages avant de remplir
+      inputOt.disabled = false;
+      inputLibre.disabled = false;
+
+      if(resultat && resultat.row) {
+        document.getElementById('rowIndex').value = resultat.row;
+        document.getElementById('ID_cal_tarifs_26-50').value = resultat.data['ID_cal_tarifs_26-50'] || "";
+        document.getElementById('Année').value = resultat.data['Année'] || "";
+        document.getElementById('semaine').value = resultat.data['N° Semaine'] || "";
+        
+        document.getElementById('Date Début (Samedi)').value = resultat.data['Date Début (Samedi)'];
+        document.getElementById('Date Fin (Samedi)').value = resultat.data['Date Fin (Samedi)'];
+        
+        let tarifOtVal = parseFloat(resultat.data['tarif_ot']);
+        inputOt.value = !isNaN(tarifOtVal) ? tarifOtVal.toFixed(2) : "";
+        
+        // On vérifie les deux noms possibles au cas où vous auriez mis un 's'
+        let tarifLibreVal = parseFloat(resultat.data['tarif_libre'] || resultat.data['tarifs_libres']);
+        inputLibre.value = !isNaN(tarifLibreVal) ? tarifLibreVal.toFixed(2) : "";
+        
+        let commission = parseFloat(resultat.data['commission_ot']);
+        document.getElementById('commission_ot').value = !isNaN(commission) ? commission.toFixed(2) : "";
+        
+        let montant = parseFloat(resultat.data['montant_restant']);
+        document.getElementById('montant_restant').value = !isNaN(montant) ? montant.toFixed(2) : "";
+        
+        document.getElementById('btnDelete').style.display = "inline-block";
+        afficherMessage("Tarif trouvé ! Vous pouvez le modifier ou le supprimer.");
+
+        // On déclenche la vérification pour griser la bonne case
+        if (inputOt.value && parseFloat(inputOt.value) > 0) gererSaisieTarif('ot');
+        else if (inputLibre.value && parseFloat(inputLibre.value) > 0) gererSaisieTarif('libre');
+
+      } else {
+        document.getElementById('tarifForm').reset();
+        document.getElementById('Date Début (Samedi)').value = dateSaisie; 
+        document.getElementById('rowIndex').value = ""; 
+        document.getElementById('btnDelete').style.display = "none";
+        
+        verifierEtRemplirCalendrier();
+        afficherMessage("Aucun tarif trouvé pour cette date. Vous pouvez créer un nouvel enregistrement.");
+      }
+    }).traiterRechercheTarif(dateSaisie);
+  }
+
+  function sauvegarderTarif() {
+    const dateDebutVal = document.getElementById('Date Début (Samedi)').value;
+    if (!dateDebutVal) {
+      afficherMessage("<span style='color:red'>Veuillez renseigner une date de début.</span>");
+      return;
+    }
+
+    let dateObj = new Date(dateDebutVal + 'T00:00:00');
+    if (dateObj.getDay() !== 6) {
+      afficherMessage("<span style='color:red'>❌ Erreur : La date de début doit IMPÉRATIVEMENT être un samedi !</span>");
+      document.getElementById('Date Début (Samedi)').focus();
+      return;
+    }
+
+    const form = document.getElementById('tarifForm');
+    let formData = {};
+    for (let i = 0; i < form.elements.length; i++) {
+      let element = form.elements[i];
+      if (element.name) formData[element.name] = element.value;
+    }
+    
+    const rowIndex = document.getElementById('rowIndex').value;
+    
+    afficherMessage("Sauvegarde en cours...");
+    google.script.run.withSuccessHandler(function(msg) {
+      if (msg.startsWith("ERREUR")) {
+        afficherMessage("<span style='color:red'>" + msg + "</span>");
+      } else {
+        afficherMessage("<span style='color:green'>" + msg + "</span>");
+        document.getElementById('btnDelete').style.display = "none";
+      }
+    }).traiterSauvegardeTarif(formData, rowIndex);
+  }
+
+  function confirmerSuppression() {
+    if (confirm("Êtes-vous certain de vouloir supprimer définitivement ce tarif ?")) {
+       const rowIndex = document.getElementById('rowIndex').value;
+       afficherMessage("Suppression en cours...");
+       
+       google.script.run.withSuccessHandler(function(msg) {
+         afficherMessage(msg);
+         document.getElementById('tarifForm').reset();
+         document.getElementById('btnDelete').style.display = "none";
+         document.getElementById('tarif_ot').disabled = false;
+         document.getElementById('tarif_libre').disabled = false;
+       }).traiterSuppressionTarif(rowIndex);
+    }
+  }
+
+  function verifierEtRemplirCalendrier() {
+    const dateDebut = document.getElementById('Date Début (Samedi)').value;
+    if (!dateDebut) return;
+    
+    let parts = dateDebut.split('-');
+    let annee = parts[0];
+    document.getElementById('Année').value = annee;
+    
+    let d = new Date(dateDebut);
+    d.setDate(d.getDate() + 7);
+    document.getElementById('Date Fin (Samedi)').value = d.toISOString().split('T')[0];
+    
+    let targetDate = new Date(dateDebut);
+    let janFirst = new Date(targetDate.getFullYear(), 0, 1);
+    let days = Math.floor((targetDate - janFirst) / (24 * 60 * 60 * 1000));
+    let semaineNum = Math.ceil((days + janFirst.getDay() + 1) / 7);
+    if (semaineNum > 52) semaineNum = 52;
+    
+    document.getElementById('semaine').value = semaineNum;
+    
+    google.script.run.withSuccessHandler(function(infos) {
+      if (infos) {
+        document.getElementById('Année').value = infos.annee;
+        document.getElementById('semaine').value = infos.semaine;
+        document.getElementById('Date Fin (Samedi)').value = infos.dateFin;
+        
+        // --- NOUVEAU : Remplir la case saison ---
+        if (document.getElementById('saison')) {
+          document.getElementById('saison').value = infos.saison || "";
+        }
+      }
+    }).recupererInfosCalendrier(dateDebut);
+  }
+</script>
