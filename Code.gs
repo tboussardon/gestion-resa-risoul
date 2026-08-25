@@ -3,6 +3,7 @@ function onOpen() {
     .createMenu('Gestion Risoul')
     .addItem('💰 Gérer les Tarifs', 'afficherInterfaceTarifs')
     .addItem('📅 Gérer les Réservations', 'afficherInterfaceResa')
+    .addItem('🏔️ Gérer la Station', 'afficherInterfaceStation') // NOUVEAU
     .addToUi();
 }
 
@@ -22,4 +23,29 @@ function afficherInterfaceResa() {
 
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
+
+function getConciergeries() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const feuilleListes = ss.getSheetByName('listes');
+  if (!feuilleListes) return [];
+  
+  const data = feuilleListes.getDataRange().getValues();
+  let conciergeries = [];
+  
+  // Parcours à partir de la ligne 2 (index 1) pour ignorer l'en-tête
+  for (let i = 1; i < data.length; i++) {
+    let val = data[i][0]; // Colonne A = index 0
+    if (val) {
+      conciergeries.push(val.toString().trim());
+    }
+  }
+  return [...new Set(conciergeries)]; // Déduplication
+}
+
+function afficherInterfaceStation() {
+  const html = HtmlService.createTemplateFromFile('Station')
+      .evaluate()
+      .setWidth(600).setHeight(550);
+  SpreadsheetApp.getUi().showModalDialog(html, 'Gestion des Périodes Station');
 }

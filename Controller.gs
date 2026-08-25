@@ -1,3 +1,105 @@
+const CONFIG_STATION = {
+  feuille: 'cal_station',
+  nomId: 'ID_cal_station',
+  colonneRechercheDate: 'ouverture_station'
+};
+
+/**
+ * Recherche une période station par date d'ouverture
+ */
+function traiterRechercheStation(dateSaisie) {
+  return rechercherEnregistrementParDate(CONFIG_STATION.feuille, CONFIG_STATION.colonneRechercheDate, dateSaisie);
+}
+
+/**
+ * Sauvegarde (Création ou Modification) d'une période station
+ */
+function traiterSauvegardeStation(formData, rowIndex) {
+  let dateOuverture = formData['ouverture_station'];
+  let dateFermeture = formData['fermeture_station'];
+
+  if (!dateOuverture || !dateFermeture) {
+    return "ERREUR : Les dates d'ouverture et de fermeture sont obligatoires.";
+  }
+
+  if (new Date(dateFermeture) < new Date(dateOuverture)) {
+    return "ERREUR : La date de fermeture ne peut pas être antérieure à la date d'ouverture.";
+  }
+
+  // --- CALCUL AUTOMATIQUE DE LA SAISON ---
+  let partsO = dateOuverture.split('-');
+  let anneeO = parseInt(partsO[0], 10);
+  let moisO = parseInt(partsO[1], 10) - 1;
+  let jourO = parseInt(partsO[2], 10);
+
+  let dOuverture = new Date(anneeO, moisO, jourO);
+  let dateDecembre1 = new Date(anneeO, 11, 1);   // 1er décembre
+  let dateAvril25 = new Date(anneeO, 3, 25);     // 25 avril
+  let dateJuin20 = new Date(anneeO, 5, 20);      // 20 juin
+  let dateSeptembre30 = new Date(anneeO, 8, 30); // 30 septembre
+
+  let saisonCalculee = "";
+  if (dOuverture >= dateJuin20 && dOuverture <= dateSeptembre30) {
+    saisonCalculee = "Été";
+  } else if (dOuverture >= dateDecembre1 || dOuverture <= dateAvril25) {
+    saisonCalculee = "Hiver";
+  }
+
+  // Écriture dans la colonne 'saison_station' (et 'saison' par compatibilité)
+  formData['saison_station'] = saisonCalculee;
+  formData['saison'] = saisonCalculee;
+
+  // --- CALCUL AUTOMATIQUE DE "années_station" (AAAA/AAAA) ---
+  let anneeOuverture = dateOuverture.split('-')[0];
+  let anneeFermeture = dateFermeture.split('-')[0];
+  formData['années_station'] = anneeOuverture + '/' + anneeFermeture;
+
+  // Vérification des doublons sur la date d'ouverture
+  let estUnDoublon = dateExisteDeja(CONFIG_STATION.feuille, CONFIG_STATION.colonneRechercheDate, dateOuverture, rowIndex);
+  if (estUnDoublon) {
+    return "ERREUR : Une période d'ouverture existe déjà pour la date du " + dateOuverture + ".";
+  }
+
+  if (rowIndex) {
+    if (!formData[CONFIG_STATION.nomId] || formData[CONFIG_STATION.nomId].toString().trim() === "") {
+      formData[CONFIG_STATION.nomId] = genererIdUnique();
+    }
+    modifierEnregistrement(CONFIG_STATION.feuille, rowIndex, formData);
+    return "Modification de la période station effectuée avec succès.";
+  } else {
+    let nouvelId = creerEnregistrement(CONFIG_STATION.feuille, CONFIG_STATION.nomId, formData);
+    return "Période station créée avec succès (ID : " + nouvelId + ").";
+  }
+}
+
+/**
+ * Suppression d'une période station
+ */
+function traiterSuppressionStation(rowIndex) {
+  supprimerEnregistrement(CONFIG_STATION.feuille, rowIndex);
+  return "Période d'ouverture supprimée définitivement.";
+}
+
+/**
+ * Récupère la liste des saisons depuis la feuille 'listes' (colonne D)
+ */
+function getSaisonsStation() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const feuilleListes = ss.getSheetByName('listes');
+  if (!feuilleListes) return [];
+  
+  const data = feuilleListes.getDataRange().getValues();
+  let saisons = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    let val = data[i][3]; // Colonne D = index 3
+    if (val) {
+      saisons.push(val.toString().trim());
+    }
+  }
+  return [...new Set(saisons)];
+}
+
 const CONFIG_TARIFS = {
   feuille: 'cal_tarifs_26-50',
   nomId: 'ID_cal_tarifs_26-50',
@@ -148,6 +250,23 @@ function getOriginesReservation() {
   return [...new Set(origines)];
 }
 
+function getConciergeries() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const feuilleListes = ss.getSheetByName('listes');
+  if (!feuilleListes) return [];
+  
+  const data = feuilleListes.getDataRange().getValues();
+  let conciergeries = [];
+  
+  for (let i = 1; i < data.length; i++) {
+    let val = data[i][0]; 
+    if (val) {
+      conciergeries.push(val.toString().trim());
+    }
+  }
+  return [...new Set(conciergeries)];
+}
+
 function getInfosStationParDate(dateSearchStr) {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const feuilleStation = ss.getSheetByName('cal_station');
@@ -157,14 +276,14 @@ function getInfosStationParDate(dateSearchStr) {
   const data = feuilleStation.getDataRange().getValues();
   const entetes = data[0];
 
-  let idxOuverture = -1, idxFermeture = -1, idxEtat = -1;
-  let idxSaison = 5; 
+  let idxOuverture = -1, idxFermeture = -1, idxEtat = -1, idxSaison = -1;
 
   for (let c = 0; c < entetes.length; c++) {
-    let nomCol = entetes[c].toString().trim();
-    if (nomCol === 'ouverture_station') idxOuverture = c;
-    if (nomCol === 'fermeture_station') idxFermeture = c;
-    if (nomCol === 'etat_station') idxEtat = c;
+    let nomCol = entetes[c].toString().trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
+    if (nomCol === 'ouverturestation') idxOuverture = c;
+    if (nomCol === 'fermeturestation') idxFermeture = c;
+    if (nomCol === 'etatstation') idxEtat = c;
+    if (nomCol === 'saisonstation' || nomCol === 'saison') idxSaison = c;
   }
 
   if (idxOuverture === -1 || idxFermeture === -1) return { etat: "Fermée", saison: "" };
@@ -187,7 +306,7 @@ function getInfosStationParDate(dateSearchStr) {
 
     if (targetDate >= dateO && targetDate <= dateF) {
       let etatTrouve = idxEtat !== -1 ? data[i][idxEtat].toString().trim() : "Fermée";
-      let saisonTrouvee = data[i][idxSaison] ? data[i][idxSaison].toString().trim() : "";
+      let saisonTrouvee = idxSaison !== -1 ? data[i][idxSaison].toString().trim() : "";
       return { etat: etatTrouve, saison: saisonTrouvee };
     }
   }

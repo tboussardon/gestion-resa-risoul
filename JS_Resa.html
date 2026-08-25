@@ -29,6 +29,7 @@
         document.getElementById('prenom').value = resultat.data['prenom'] || "";
         document.getElementById('origine_reservation').value = resultat.data['origine_reservation'] || "";
         document.getElementById('etat_station').value = resultat.data['etat_station'] || "";
+        document.getElementById('conciergerie').value = resultat.data['conciergerie'] || "";
         if (document.getElementById('saison')) {
             let saisonTrouvee = resultat.data['saison'] || "";
             document.getElementById('saison').value = saisonTrouvee;
@@ -112,7 +113,7 @@
     let janFirst = new Date(targetDate.getFullYear(), 0, 1);
     let days = Math.floor((targetDate - janFirst) / (24 * 60 * 60 * 1000));
     let semaineNum = Math.ceil((days + janFirst.getDay() + 1) / 7);
-    document.getElementById('semaine').value = semaineNum > 52 ? 52 : semaineNum;
+    document.getElementById('semaine').value = semaineNum > 52 ? 52 : semaineNum;windo
     
     // CORRECTION : Restauration de l'appel pour remplir Année et Semaine depuis cal_26-50
     google.script.run.withSuccessHandler(function(infos) {
@@ -133,14 +134,26 @@
   }
 
   window.onload = function() {
-    google.script.run.withSuccessHandler(function(origines) {
-      const select = document.getElementById('origine_reservation');
-      origines.forEach(function(org) {
-        let option = document.createElement('option');
-        option.value = org;
-        option.text = org;
-        select.appendChild(option);
-      });
-    }).getOriginesReservation();
-  };
+  // Chargement des origines de réservation
+  google.script.run.withSuccessHandler(function(origines) {
+    const select = document.getElementById('origine_reservation');
+    origines.forEach(function(org) {
+      let option = document.createElement('option');
+      option.value = org;
+      option.text = org;
+      select.appendChild(option);
+    });
+  }).getOriginesReservation();
+
+  // Chargement de la liste Conciergerie (Colonne A de 'listes')
+  google.script.run.withSuccessHandler(function(conciergeries) {
+    const selectConciergerie = document.getElementById('conciergerie');
+    conciergeries.forEach(function(item) {
+      let option = document.createElement('option');
+      option.value = item;
+      option.text = item;
+      selectConciergerie.appendChild(option);
+    });
+  }).getConciergeries();
+};
 </script>
