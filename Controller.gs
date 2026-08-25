@@ -22,37 +22,38 @@ function traiterSauvegardeStation(formData, rowIndex) {
     return "ERREUR : Les dates d'ouverture et de fermeture sont obligatoires.";
   }
 
-  if (new Date(dateFermeture) < new Date(dateOuverture)) {
+  // 1. Contrôle : fermeture postérieure ou égale à l'ouverture
+  if (dateFermeture < dateOuverture) {
     return "ERREUR : La date de fermeture ne peut pas être antérieure à la date d'ouverture.";
   }
 
-  // --- CALCUL AUTOMATIQUE DE LA SAISON ---
-  let partsO = dateOuverture.split('-');
-  let anneeO = parseInt(partsO[0], 10);
-  let moisO = parseInt(partsO[1], 10) - 1;
-  let jourO = parseInt(partsO[2], 10);
+  let infoO = determinerSaisonEtAnnee(dateOuverture);
+  let infoF = determinerSaisonEtAnnee(dateFermeture);
 
-  let dOuverture = new Date(anneeO, moisO, jourO);
-  let dateDecembre1 = new Date(anneeO, 11, 1);   // 1er décembre
-  let dateAvril25 = new Date(anneeO, 3, 25);     // 25 avril
-  let dateJuin20 = new Date(anneeO, 5, 20);      // 20 juin
-  let dateSeptembre30 = new Date(anneeO, 8, 30); // 30 septembre
-
-  let saisonCalculee = "";
-  if (dOuverture >= dateJuin20 && dOuverture <= dateSeptembre30) {
-    saisonCalculee = "Été";
-  } else if (dOuverture >= dateDecembre1 || dOuverture <= dateAvril25) {
-    saisonCalculee = "Hiver";
+  // 2. Contrôle : ouverture dans les créneaux
+  if (!infoO) {
+    return "ERREUR : La date d'ouverture (" + dateOuverture + ") est hors créneau (Hiver : 01/12-25/04, Été : 20/06-30/09).";
   }
 
-  // Écriture dans la colonne 'saison_station' (et 'saison' par compatibilité)
+  // 3. Contrôle : fermeture dans les créneaux
+  if (!infoF) {
+    return "ERREUR : La date de fermeture (" + dateFermeture + ") est hors créneau (Hiver : 01/12-25/04, Été : 20/06-30/09).";
+  }
+
+  // 4. Contrôle : même saison et même période
+  if (infoO.saison !== infoF.saison || infoO.anneeDebut !== infoF.anneeDebut) {
+    return "ERREUR : Les dates d'ouverture et de fermeture doivent appartenir à la même saison.";
+  }
+
+  let saisonCalculee = infoO.saison;
+  let etatCalcule = "Ouverte";
+  let anneesStation = infoO.anneeDebut + '/' + infoO.anneeFin;
+
   formData['saison_station'] = saisonCalculee;
   formData['saison'] = saisonCalculee;
-
-  // --- CALCUL AUTOMATIQUE DE "années_station" (AAAA/AAAA) ---
-  let anneeOuverture = dateOuverture.split('-')[0];
-  let anneeFermeture = dateFermeture.split('-')[0];
-  formData['années_station'] = anneeOuverture + '/' + anneeFermeture;
+  formData['etat_station'] = etatCalcule;
+  formData['état_station'] = etatCalcule;
+  formData['années_station'] = anneesStation;
 
   // Vérification des doublons sur la date d'ouverture
   let estUnDoublon = dateExisteDeja(CONFIG_STATION.feuille, CONFIG_STATION.colonneRechercheDate, dateOuverture, rowIndex);
@@ -70,6 +71,30 @@ function traiterSauvegardeStation(formData, rowIndex) {
     let nouvelId = creerEnregistrement(CONFIG_STATION.feuille, CONFIG_STATION.nomId, formData);
     return "Période station créée avec succès (ID : " + nouvelId + ").";
   }
+}
+
+/**
+ * Détermine si une date appartient à une saison valide et renvoie les années associées
+ */
+function determinerSaisonEtAnnee(dateStr) {
+  if (!dateStr) return null;
+  let parts = dateStr.split('-');
+  let a = parseInt(parts[0], 10);
+  let m = parseInt(parts[1], 10);
+  let j = parseInt(parts[2], 10);
+
+  // Saison Été : 20 juin au 30 septembre
+  if ((m === 6 && j >= 20) || (m === 7 || m === 8) || (m === 9 && j <= 30)) {
+    return { saison: "Été", anneeDebut: a, anneeFin: a };
+  }
+
+  // Saison Hiver : 1er décembre au 25 avril
+  if (m === 12 || (m >= 1 && m <= 3) || (m === 4 && j <= 25)) {
+    let anneeDebut = (m <= 4) ? a - 1 : a;
+    return { saison: "Hiver", anneeDebut: anneeDebut, anneeFin: anneeDebut + 1 };
+  }
+
+  return null;
 }
 
 /**

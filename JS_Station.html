@@ -29,10 +29,27 @@
     return "";
   }
 
+  function determinerSaisonEtAnnee(dateStr) {
+    if (!dateStr) return null;
+    let parts = dateStr.split('-');
+    let a = parseInt(parts[0], 10);
+    let m = parseInt(parts[1], 10);
+    let j = parseInt(parts[2], 10);
+
+    if ((m === 6 && j >= 20) || (m === 7 || m === 8) || (m === 9 && j <= 30)) {
+      return { saison: "Été", anneeDebut: a, anneeFin: a };
+    }
+    if (m === 12 || (m >= 1 && m <= 3) || (m === 4 && j <= 25)) {
+      let anneeDebut = (m <= 4) ? a - 1 : a;
+      return { saison: "Hiver", anneeDebut: anneeDebut, anneeFin: anneeDebut + 1 };
+    }
+    return null;
+  }
+
   function chercherStation() {
     const dateSaisie = document.getElementById('searchDate').value;
     if (!dateSaisie) {
-      afficherMessage("Veuillez sélectionner une date d'ouverture.");
+      afficherMessage("<span style='color:red'>Veuillez sélectionner une date d'ouverture.</span>");
       return;
     }
     
@@ -47,47 +64,93 @@
       if (resultat && resultat.row) {
         document.getElementById('rowIndex').value = resultat.row;
         document.getElementById('ID_cal_station').value = getValeurCle(resultat.data, ['ID_cal_station']);
-        
         document.getElementById('ouverture_station').value = getValeurCle(resultat.data, ['ouverture_station']);
         document.getElementById('fermeture_station').value = getValeurCle(resultat.data, ['fermeture_station']);
         
-        let etatTrouve = getValeurCle(resultat.data, ['etat_station', 'état_station', 'etat station', 'Etat station']) || "Ouverte";
-        let saisonTrouvee = getValeurCle(resultat.data, ['saison_station', 'saison', 'Saison']);
-        let anneesTrouvees = getValeurCle(resultat.data, ['années_station', 'annees_station', 'années station', 'Années station']);
-
-        document.getElementById('etat_station').value = etatTrouve;
-
-        if (!saisonTrouvee) {
-          calculerSaisonAuto();
-        } else {
-          document.getElementById('saison_station').value = saisonTrouvee;
-        }
-
-        if (!anneesTrouvees) {
-          calculerAnneesStationAuto();
-        } else {
-          document.getElementById('années_station').value = anneesTrouvees;
-        }
-        
+        calculerInfosAuto();
         document.getElementById('btnDelete').style.display = "inline-block";
-        afficherMessage("Période trouvée ! Vous pouvez la modifier ou la supprimer.");
+        afficherMessage("<span style='color:green'>Période trouvée ! Vous pouvez la modifier ou la supprimer.</span>");
       } else {
         viderFormulaire();
         document.getElementById('searchDate').value = dateSaisie;
         document.getElementById('ouverture_station').value = dateSaisie; 
-        document.getElementById('etat_station').value = "Ouverte";
+        
         calculerInfosAuto();
         afficherMessage("Aucune période trouvée. Vous pouvez créer un nouvel enregistrement.");
       }
     }).traiterRechercheStation(dateSaisie);
   }
 
+  function calculerInfosAuto() {
+    const dOuverture = document.getElementById('ouverture_station').value;
+    const dFermeture = document.getElementById('fermeture_station').value;
+
+    const inputEtat = document.getElementById('etat_station');
+    const inputSaison = document.getElementById('saison_station');
+    const inputAnnees = document.getElementById('années_station');
+
+    if (!dOuverture) {
+      inputEtat.value = "";
+      inputSaison.value = "";
+      inputAnnees.value = "";
+      return false;
+    }
+
+    if (dFermeture && dFermeture < dOuverture) {
+      inputEtat.value = "Fermée";
+      inputSaison.value = "";
+      inputAnnees.value = "";
+      afficherMessage("<span style='color:red'>❌ La date de fermeture ne peut pas être antérieure à la date d'ouverture.</span>");
+      return false;
+    }
+
+    let infoO = determinerSaisonEtAnnee(dOuverture);
+
+    if (!infoO) {
+      inputEtat.value = "Fermée";
+      inputSaison.value = "";
+      inputAnnees.value = "";
+      afficherMessage("<span style='color:red'>❌ La date d'ouverture est hors créneau (Hiver : 01/12-25/04, Été : 20/06-30/09).</span>");
+      return false;
+    }
+
+    if (dFermeture) {
+      let infoF = determinerSaisonEtAnnee(dFermeture);
+      if (!infoF) {
+        inputEtat.value = "Fermée";
+        inputSaison.value = "";
+        inputAnnees.value = "";
+        afficherMessage("<span style='color:red'>❌ La date de fermeture est hors créneau (Hiver : 01/12-25/04, Été : 20/06-30/09).</span>");
+        return false;
+      }
+      if (infoO.saison !== infoF.saison || infoO.anneeDebut !== infoF.anneeDebut) {
+        inputEtat.value = "Fermée";
+        inputSaison.value = "";
+        inputAnnees.value = "";
+        afficherMessage("<span style='color:red'>❌ Les dates d'ouverture et de fermeture doivent appartenir à la même saison.</span>");
+        return false;
+      }
+    }
+
+    // Période valide
+    inputEtat.value = "Ouverte";
+    inputSaison.value = infoO.saison;
+    inputAnnees.value = infoO.anneeDebut + '/' + infoO.anneeFin;
+    afficherMessage("");
+    return true;
+  }
+
   function sauvegarderStation() {
-    const ouverture = document.getElementById('ouverture_station').value;
-    const fermeture = document.getElementById('fermeture_station').value;
+    const dOuverture = document.getElementById('ouverture_station').value;
+    const dFermeture = document.getElementById('fermeture_station').value;
     
-    if (!ouverture || !fermeture) {
+    if (!dOuverture || !dFermeture) {
       afficherMessage("<span style='color:red'>Veuillez renseigner les dates d'ouverture et de fermeture.</span>");
+      return;
+    }
+
+    // Validation préalable : bloque la sauvegarde si une règle n'est pas respectée
+    if (!calculerInfosAuto()) {
       return;
     }
 
@@ -123,60 +186,6 @@
     }
   }
 
-  function calculerInfosAuto() {
-    // Si la date d'ouverture est présente mais l'état vide, on force "Ouverte"
-    if (document.getElementById('ouverture_station').value && !document.getElementById('etat_station').value) {
-      document.getElementById('etat_station').value = "Ouverte";
-    }
-    calculerSaisonAuto();
-    calculerAnneesStationAuto();
-  }
-
-  function calculerSaisonAuto() {
-    const dateOuvertureStr = document.getElementById('ouverture_station').value;
-    const inputSaison = document.getElementById('saison_station');
-
-    if (!dateOuvertureStr) {
-      inputSaison.value = "";
-      return;
-    }
-    
-    let parts = dateOuvertureStr.split('-');
-    let annee = parseInt(parts[0], 10);
-    let mois = parseInt(parts[1], 10) - 1;
-    let jour = parseInt(parts[2], 10);
-    
-    let dO = new Date(annee, mois, jour);
-    let dateDecembre1 = new Date(annee, 11, 1);   // 1er décembre
-    let dateAvril25 = new Date(annee, 3, 25);     // 25 avril
-    let dateJuin20 = new Date(annee, 5, 20);      // 20 juin
-    let dateSeptembre30 = new Date(annee, 8, 30); // 30 septembre
-    
-    let saisonVal = "";
-    if (dO >= dateJuin20 && dO <= dateSeptembre30) {
-      saisonVal = "Été";
-    } else if (dO >= dateDecembre1 || dO <= dateAvril25) {
-      saisonVal = "Hiver";
-    }
-
-    inputSaison.value = saisonVal;
-  }
-
-  function calculerAnneesStationAuto() {
-    const dOuverture = document.getElementById('ouverture_station').value;
-    const dFermeture = document.getElementById('fermeture_station').value;
-    const inputAnnees = document.getElementById('années_station');
-
-    if (dOuverture && dFermeture) {
-      let anneeO = dOuverture.split('-')[0];
-      let anneeF = dFermeture.split('-')[0];
-      inputAnnees.value = anneeO + '/' + anneeF;
-    } else {
-      inputAnnees.value = "";
-    }
-  }
-
-  // Réinitialisation complète des champs à l'ouverture du formulaire
   window.onload = function() {
     viderFormulaire();
   };
