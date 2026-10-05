@@ -1,192 +1,94 @@
 <script>
-  function afficherMessage(msg) {
-    document.getElementById('messageBox').innerHTML = '<b>' + msg + '</b>';
-  }
-
+  function afficherMessage(msg) { document.getElementById('messageBox').innerHTML = '<b>' + msg + '</b>'; }
   function viderFormulaire() {
-    document.getElementById('stationForm').reset();
-    document.getElementById('searchDate').value = "";
-    document.getElementById('rowIndex').value = "";
-    document.getElementById('ID_cal_station').value = "";
-    document.getElementById('ouverture_station').value = "";
-    document.getElementById('fermeture_station').value = "";
-    document.getElementById('etat_station').value = "";
-    document.getElementById('saison_station').value = "";
-    document.getElementById('années_station').value = "";
-    document.getElementById('btnDelete').style.display = "none";
-    afficherMessage("");
+    document.getElementById('stationForm').reset(); document.getElementById('searchDate').value = "";
+    document.getElementById('rowIndex').value = ""; document.getElementById('ID_cal_station').value = "";
+    document.getElementById('btnDelete').style.display = "none"; afficherMessage("");
   }
-
   function getValeurCle(obj, clesPossibles) {
     if (!obj) return "";
     for (let key in obj) {
       let keyNorm = key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
       for (let cp of clesPossibles) {
-        let cpNorm = cp.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "");
-        if (keyNorm === cpNorm) return obj[key];
+        if (keyNorm === cp.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]/g, "")) return obj[key];
       }
     }
     return "";
   }
-
+  
   function determinerSaisonEtAnnee(dateStr) {
+    // Note : Reproduction basique ici, le vrai calcul est côté serveur par sécurité.
     if (!dateStr) return null;
-    let parts = dateStr.split('-');
-    let a = parseInt(parts[0], 10);
-    let m = parseInt(parts[1], 10);
-    let j = parseInt(parts[2], 10);
-
-    if ((m === 6 && j >= 20) || (m === 7 || m === 8) || (m === 9 && j <= 30)) {
-      return { saison: "Été", anneeDebut: a, anneeFin: a };
-    }
+    let parts = dateStr.split('-'); let a = parseInt(parts[0], 10), m = parseInt(parts[1], 10), j = parseInt(parts[2], 10);
+    if ((m === 6 && j >= 20) || (m === 7 || m === 8) || (m === 9 && j <= 30)) return { saison: "Été", anneeDebut: a, anneeFin: a };
     if (m === 12 || (m >= 1 && m <= 3) || (m === 4 && j <= 25)) {
-      let anneeDebut = (m <= 4) ? a - 1 : a;
-      return { saison: "Hiver", anneeDebut: anneeDebut, anneeFin: anneeDebut + 1 };
+      let anneeDebut = (m <= 4) ? a - 1 : a; return { saison: "Hiver", anneeDebut: anneeDebut, anneeFin: anneeDebut + 1 };
     }
     return null;
   }
 
   function chercherStation() {
     const dateSaisie = document.getElementById('searchDate').value;
-    if (!dateSaisie) {
-      afficherMessage("<span style='color:red'>Veuillez sélectionner une date d'ouverture.</span>");
-      return;
-    }
+    if (!dateSaisie) { afficherMessage("<span style='color:red'>Veuillez sélectionner une date.</span>"); return; }
     
     afficherMessage("Recherche en cours...");
-    
     google.script.run.withSuccessHandler(function(resultat) {
-      if (resultat && resultat.erreurDebug) {
-        afficherMessage("<span style='color:red'>" + resultat.erreurDebug + "</span>");
-        return;
-      }
-      
+      if (resultat && resultat.erreurDebug) { afficherMessage("<span style='color:red'>" + resultat.erreurDebug + "</span>"); return; }
       if (resultat && resultat.row) {
         document.getElementById('rowIndex').value = resultat.row;
         document.getElementById('ID_cal_station').value = getValeurCle(resultat.data, ['ID_cal_station']);
         document.getElementById('ouverture_station').value = getValeurCle(resultat.data, ['ouverture_station']);
         document.getElementById('fermeture_station').value = getValeurCle(resultat.data, ['fermeture_station']);
-        
         calculerInfosAuto();
         document.getElementById('btnDelete').style.display = "inline-block";
-        afficherMessage("<span style='color:green'>Période trouvée ! Vous pouvez la modifier ou la supprimer.</span>");
+        afficherMessage("<span style='color:green'>Période trouvée !</span>");
       } else {
         viderFormulaire();
         document.getElementById('searchDate').value = dateSaisie;
         document.getElementById('ouverture_station').value = dateSaisie; 
-        
         calculerInfosAuto();
-        afficherMessage("Aucune période trouvée. Vous pouvez créer un nouvel enregistrement.");
+        afficherMessage("Aucune période trouvée. Vous pouvez en créer une.");
       }
     }).traiterRechercheStation(dateSaisie);
   }
 
   function calculerInfosAuto() {
-    const dOuverture = document.getElementById('ouverture_station').value;
-    const dFermeture = document.getElementById('fermeture_station').value;
+    const dOuv = document.getElementById('ouverture_station').value, dFer = document.getElementById('fermeture_station').value;
+    const iEtat = document.getElementById('etat_station'), iSaison = document.getElementById('saison_station'), iAnn = document.getElementById('années_station');
 
-    const inputEtat = document.getElementById('etat_station');
-    const inputSaison = document.getElementById('saison_station');
-    const inputAnnees = document.getElementById('années_station');
-
-    if (!dOuverture) {
-      inputEtat.value = "";
-      inputSaison.value = "";
-      inputAnnees.value = "";
-      return false;
+    if (!dOuv) { iEtat.value = ""; iSaison.value = ""; iAnn.value = ""; return false; }
+    if (dFer && dFer < dOuv) { iEtat.value = "Fermée"; afficherMessage("<span style='color:red'>❌ Fermeture antérieure à l'ouverture.</span>"); return false; }
+    let infoO = determinerSaisonEtAnnee(dOuv);
+    if (!infoO) { iEtat.value = "Fermée"; afficherMessage("<span style='color:red'>❌ Date d'ouverture hors créneau.</span>"); return false; }
+    if (dFer) {
+      let infoF = determinerSaisonEtAnnee(dFer);
+      if (!infoF || infoO.saison !== infoF.saison) { iEtat.value = "Fermée"; afficherMessage("<span style='color:red'>❌ Dates incompatibles avec les saisons.</span>"); return false; }
     }
-
-    if (dFermeture && dFermeture < dOuverture) {
-      inputEtat.value = "Fermée";
-      inputSaison.value = "";
-      inputAnnees.value = "";
-      afficherMessage("<span style='color:red'>❌ La date de fermeture ne peut pas être antérieure à la date d'ouverture.</span>");
-      return false;
-    }
-
-    let infoO = determinerSaisonEtAnnee(dOuverture);
-
-    if (!infoO) {
-      inputEtat.value = "Fermée";
-      inputSaison.value = "";
-      inputAnnees.value = "";
-      afficherMessage("<span style='color:red'>❌ La date d'ouverture est hors créneau (Hiver : 01/12-25/04, Été : 20/06-30/09).</span>");
-      return false;
-    }
-
-    if (dFermeture) {
-      let infoF = determinerSaisonEtAnnee(dFermeture);
-      if (!infoF) {
-        inputEtat.value = "Fermée";
-        inputSaison.value = "";
-        inputAnnees.value = "";
-        afficherMessage("<span style='color:red'>❌ La date de fermeture est hors créneau (Hiver : 01/12-25/04, Été : 20/06-30/09).</span>");
-        return false;
-      }
-      if (infoO.saison !== infoF.saison || infoO.anneeDebut !== infoF.anneeDebut) {
-        inputEtat.value = "Fermée";
-        inputSaison.value = "";
-        inputAnnees.value = "";
-        afficherMessage("<span style='color:red'>❌ Les dates d'ouverture et de fermeture doivent appartenir à la même saison.</span>");
-        return false;
-      }
-    }
-
-    // Période valide
-    inputEtat.value = "ouverte";
-    inputSaison.value = infoO.saison;
-    inputAnnees.value = infoO.anneeDebut + '/' + infoO.anneeFin;
-    afficherMessage("");
-    return true;
+    iEtat.value = "ouverte"; iSaison.value = infoO.saison; iAnn.value = infoO.anneeDebut + '/' + infoO.anneeFin;
+    afficherMessage(""); return true;
   }
 
   function sauvegarderStation() {
-    const dOuverture = document.getElementById('ouverture_station').value;
-    const dFermeture = document.getElementById('fermeture_station').value;
-    
-    if (!dOuverture || !dFermeture) {
-      afficherMessage("<span style='color:red'>Veuillez renseigner les dates d'ouverture et de fermeture.</span>");
-      return;
-    }
+    if (!document.getElementById('ouverture_station').value || !document.getElementById('fermeture_station').value) return;
+    if (!calculerInfosAuto()) return;
 
-    // Validation préalable : bloque la sauvegarde si une règle n'est pas respectée
-    if (!calculerInfosAuto()) {
-      return;
-    }
-
-    const form = document.getElementById('stationForm');
     let formData = {};
-    for (let i = 0; i < form.elements.length; i++) {
-      let element = form.elements[i];
-      if (element.name) formData[element.name] = element.value;
+    for (let i = 0; i < document.getElementById('stationForm').elements.length; i++) {
+      let el = document.getElementById('stationForm').elements[i]; if (el.name) formData[el.name] = el.value;
     }
-    
-    const rowIndex = document.getElementById('rowIndex').value;
-    
     afficherMessage("Sauvegarde en cours...");
     google.script.run.withSuccessHandler(function(msg) {
-      if (msg.startsWith("ERREUR")) {
-        afficherMessage("<span style='color:red'>" + msg + "</span>");
-      } else {
-        afficherMessage("<span style='color:green'>" + msg + "</span>");
-        document.getElementById('btnDelete').style.display = "none";
-      }
-    }).traiterSauvegardeStation(formData, rowIndex);
+      afficherMessage(msg.startsWith("ERREUR") ? "<span style='color:red'>" + msg + "</span>" : "<span style='color:green'>" + msg + "</span>");
+      if (!msg.startsWith("ERREUR")) document.getElementById('btnDelete').style.display = "none";
+    }).traiterSauvegardeStation(formData, document.getElementById('rowIndex').value);
   }
 
   function confirmerSuppression() {
-    if (confirm("Êtes-vous sûr de vouloir supprimer cette période d'ouverture ?")) {
-       const rowIndex = document.getElementById('rowIndex').value;
+    if (confirm("Supprimer cette période ?")) {
        afficherMessage("Suppression en cours...");
-       
-       google.script.run.withSuccessHandler(function(msg) {
-         afficherMessage(msg);
-         viderFormulaire();
-       }).traiterSuppressionStation(rowIndex);
+       google.script.run.withSuccessHandler(function(msg) { afficherMessage(msg); viderFormulaire(); }).traiterSuppressionStation(document.getElementById('rowIndex').value);
     }
   }
 
-  window.onload = function() {
-    viderFormulaire();
-  };
+  window.onload = function() { viderFormulaire(); };
 </script>

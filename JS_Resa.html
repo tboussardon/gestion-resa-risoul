@@ -1,47 +1,27 @@
 <script>
-  function afficherMessage(msg) {
-    document.getElementById('messageBox').innerHTML = '<b>' + msg + '</b>';
-  }
+  function afficherMessage(msg) { document.getElementById('messageBox').innerHTML = '<b>' + msg + '</b>'; }
 
   function chercherReservation() {
     const dateSaisie = document.getElementById('searchDate').value;
-    if(!dateSaisie) {
-      afficherMessage("Veuillez sélectionner une date."); return;
-    }
+    if(!dateSaisie) { afficherMessage("Veuillez sélectionner une date."); return; }
     
     afficherMessage("Recherche en cours...");
-    
     google.script.run.withSuccessHandler(function(resultat) {
-      if(resultat && resultat.erreurDebug) {
-        afficherMessage("<span style='color:red'>" + resultat.erreurDebug + "</span>"); return;
-      }
+      if(resultat && resultat.erreurDebug) { afficherMessage("<span style='color:red'>" + resultat.erreurDebug + "</span>"); return; }
       if(resultat && resultat.row) {
         document.getElementById('rowIndex').value = resultat.row;
         document.getElementById('ID_cal_reservation_26-50').value = resultat.data['ID_cal_reservation_26-50'] || "";
         document.getElementById('ID_cal_tarifs_26-50').value = resultat.data['ID_cal_tarifs_26-50'] || "";
-        
         document.getElementById('Année').value = resultat.data['Année'] || "";
         document.getElementById('semaine').value = resultat.data['N° Semaine'] || "";
         document.getElementById('Date Début (Samedi)').value = resultat.data['Date Début (Samedi)'];
         document.getElementById('Date Fin (Samedi)').value = resultat.data['Date Fin (Samedi)'];
-        
         document.getElementById('nom').value = resultat.data['nom'] || "";
         document.getElementById('prenom').value = resultat.data['prenom'] || "";
         document.getElementById('origine_reservation').value = resultat.data['origine_reservation'] || "";
         document.getElementById('etat_station').value = resultat.data['etat_station'] || "";
         document.getElementById('conciergerie').value = resultat.data['conciergerie'] || "";
-        if (document.getElementById('saison')) {
-            let saisonTrouvee = resultat.data['saison'] || "";
-            document.getElementById('saison').value = saisonTrouvee;
-            
-            if (saisonTrouvee === "") {
-                google.script.run.withSuccessHandler(function(infos) {
-                    if (infos && infos.saison) {
-                        document.getElementById('saison').value = infos.saison;
-                    }
-                }).getInfosStationParDate(document.getElementById('Date Début (Samedi)').value);
-            }
-        }
+        document.getElementById('saison').value = resultat.data['saison'] || "";
         
         document.getElementById('btnDelete').style.display = "inline-block";
         afficherMessage("Réservation trouvée !");
@@ -58,43 +38,26 @@
 
   function sauvegarderReservation() {
     const dateDebutVal = document.getElementById('Date Début (Samedi)').value;
-    if (!dateDebutVal) {
-      afficherMessage("<span style='color:red'>Veuillez renseigner une date de début.</span>"); return;
-    }
-
-    let dateObj = new Date(dateDebutVal + 'T00:00:00');
-    if (dateObj.getDay() !== 6) {
-      afficherMessage("<span style='color:red'>❌ Erreur : La date de début doit être un samedi !</span>"); return;
-    }
+    if (!dateDebutVal) { afficherMessage("<span style='color:red'>Veuillez renseigner une date.</span>"); return; }
+    if (new Date(dateDebutVal + 'T00:00:00').getDay() !== 6) { afficherMessage("<span style='color:red'>La date de début doit être un samedi !</span>"); return; }
 
     const form = document.getElementById('resaForm');
     let formData = {};
-    for (let i = 0; i < form.elements.length; i++) {
-      let element = form.elements[i];
-      if (element.name) formData[element.name] = element.value;
-    }
-    
-    const rowIndex = document.getElementById('rowIndex').value;
+    for (let i = 0; i < form.elements.length; i++) if (form.elements[i].name) formData[form.elements[i].name] = form.elements[i].value;
     
     afficherMessage("Sauvegarde en cours...");
     google.script.run.withSuccessHandler(function(msg) {
-      if (msg.startsWith("ERREUR")) afficherMessage("<span style='color:red'>" + msg + "</span>");
-      else {
-        afficherMessage("<span style='color:green'>" + msg + "</span>");
-        document.getElementById('btnDelete').style.display = "none";
-      }
-    }).traiterSauvegardeReservation(formData, rowIndex);
+      afficherMessage(msg.startsWith("ERREUR") ? "<span style='color:red'>" + msg + "</span>" : "<span style='color:green'>" + msg + "</span>");
+      if (!msg.startsWith("ERREUR")) document.getElementById('btnDelete').style.display = "none";
+    }).traiterSauvegardeReservation(formData, document.getElementById('rowIndex').value);
   }
 
   function confirmerSuppression() {
     if (confirm("Supprimer définitivement cette réservation ?")) {
-       const rowIndex = document.getElementById('rowIndex').value;
        afficherMessage("Suppression en cours...");
        google.script.run.withSuccessHandler(function(msg) {
-         afficherMessage(msg);
-         document.getElementById('resaForm').reset();
-         document.getElementById('btnDelete').style.display = "none";
-       }).traiterSuppressionReservation(rowIndex);
+         afficherMessage(msg); document.getElementById('resaForm').reset(); document.getElementById('btnDelete').style.display = "none";
+       }).traiterSuppressionReservation(document.getElementById('rowIndex').value);
     }
   }
 
@@ -102,20 +65,10 @@
     const dateDebut = document.getElementById('Date Début (Samedi)').value;
     if (!dateDebut) return;
     
-    let parts = dateDebut.split('-');
-    document.getElementById('Année').value = parts[0];
-    
-    let d = new Date(dateDebut);
-    d.setDate(d.getDate() + 7);
+    document.getElementById('Année').value = dateDebut.split('-')[0];
+    let d = new Date(dateDebut); d.setDate(d.getDate() + 7);
     document.getElementById('Date Fin (Samedi)').value = d.toISOString().split('T')[0];
     
-    let targetDate = new Date(dateDebut);
-    let janFirst = new Date(targetDate.getFullYear(), 0, 1);
-    let days = Math.floor((targetDate - janFirst) / (24 * 60 * 60 * 1000));
-    let semaineNum = Math.ceil((days + janFirst.getDay() + 1) / 7);
-    document.getElementById('semaine').value = semaineNum > 52 ? 52 : semaineNum;windo
-    
-    // CORRECTION : Restauration de l'appel pour remplir Année et Semaine depuis cal_26-50
     google.script.run.withSuccessHandler(function(infos) {
       if (infos) {
         document.getElementById('Année').value = infos.annee;
@@ -124,36 +77,19 @@
       }
     }).recupererInfosCalendrier(dateDebut);
 
-    // Remplissage en direct de l'état de la station ET de la saison depuis cal_station
     google.script.run.withSuccessHandler(function(infos) {
       document.getElementById('etat_station').value = infos.etat;
-      if (document.getElementById('saison')) {
-        document.getElementById('saison').value = infos.saison;
-      }
+      if (document.getElementById('saison')) document.getElementById('saison').value = infos.saison;
     }).getInfosStationParDate(dateDebut);
   }
 
   window.onload = function() {
-  // Chargement des origines de réservation
-  google.script.run.withSuccessHandler(function(origines) {
-    const select = document.getElementById('origine_reservation');
-    origines.forEach(function(org) {
-      let option = document.createElement('option');
-      option.value = org;
-      option.text = org;
-      select.appendChild(option);
-    });
-  }).getOriginesReservation();
+    google.script.run.withSuccessHandler(orgs => {
+      orgs.forEach(org => document.getElementById('origine_reservation').add(new Option(org, org)));
+    }).getOriginesReservation();
 
-  // Chargement de la liste Conciergerie (Colonne A de 'listes')
-  google.script.run.withSuccessHandler(function(conciergeries) {
-    const selectConciergerie = document.getElementById('conciergerie');
-    conciergeries.forEach(function(item) {
-      let option = document.createElement('option');
-      option.value = item;
-      option.text = item;
-      selectConciergerie.appendChild(option);
-    });
-  }).getConciergeries();
-};
+    google.script.run.withSuccessHandler(conciergeries => {
+      conciergeries.forEach(item => document.getElementById('conciergerie').add(new Option(item, item)));
+    }).getConciergeries();
+  };
 </script>

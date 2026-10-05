@@ -5,7 +5,7 @@ function onOpen() {
     .addItem('📅 Gérer les Réservations', 'afficherInterfaceResa')
     .addItem('🏔️ Gérer la Station', 'afficherInterfaceStation')
     .addSeparator()
-    .addItem('📊 Synthèse & Rapports', 'afficherInterfaceSynthese') // NOUVEAU
+    .addItem('📊 Synthèse & Rapports', 'afficherInterfaceSynthese')
     .addToUi();
 }
 
@@ -49,12 +49,47 @@ function getConciergeries() {
   const data = feuilleListes.getDataRange().getValues();
   let conciergeries = [];
   
-  // Parcours à partir de la ligne 2 (index 1) pour ignorer l'en-tête
   for (let i = 1; i < data.length; i++) {
-    let val = data[i][0]; // Colonne A = index 0
+    let val = data[i][0];
     if (val) {
       conciergeries.push(val.toString().trim());
     }
   }
-  return [...new Set(conciergeries)]; // Déduplication
+  return [...new Set(conciergeries)];
+}
+
+/**
+ * Fonction appelée automatiquement lors de l'ouverture de l'URL de la Web App.
+ */
+function doGet(e) {
+  // 1. Définir la page par défaut à afficher (Index = Tarifs)
+  let pageAfficher = 'Index'; 
+  
+  // 2. Si l'URL contient un paramètre "page" (ex: URL_DU_SCRIPT?page=Resa), on le récupère
+  if (e && e.parameter && e.parameter.page) {
+    pageAfficher = e.parameter.page;
+  }
+
+  // 3. Sécurité : Vérifier que la page demandée existe bien parmi vos fichiers
+  const pagesValides = ['Index', 'Resa', 'Station', 'Synthese'];
+  if (!pagesValides.includes(pageAfficher)) {
+    pageAfficher = 'Index'; // Retour à l'accueil en cas d'erreur
+  }
+
+  // 4. Générer le HTML depuis le fichier correspondant
+  let htmlOutput = HtmlService.createTemplateFromFile(pageAfficher).evaluate();
+  
+  // 5. Paramétrages de la page web (Titre de l'onglet et adaptation aux smartphones)
+  htmlOutput.setTitle('Gestion Risoul - ' + pageAfficher)
+            .addMetaTag('viewport', 'width=device-width, initial-scale=1');
+            
+  return htmlOutput;
+}
+
+/**
+ * Fonction utilitaire pour récupérer l'URL de notre propre Web App
+ * Cela permet de générer les liens du menu de navigation.
+ */
+function getScriptUrl() {
+  return ScriptApp.getService().getUrl();
 }

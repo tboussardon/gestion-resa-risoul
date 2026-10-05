@@ -5,6 +5,13 @@
     <?!= include('CSS'); ?> 
   </head>
   <body>
+    <? var url = getScriptUrl(); ?>
+    <div class="nav-bar">
+       <a href="<?= url ?>?page=Index">💰 Tarifs</a>
+       <a href="<?= url ?>?page=Resa">📅 Réservations</a>
+       <a href="<?= url ?>?page=Station">🏔️ Station</a>
+       <a href="<?= url ?>?page=Synthese">📊 Synthèse</a>
+    </div>
     <h2>Gestion des Périodes d'Ouverture Station</h2>
     
     <div class="section search-box">
@@ -18,29 +25,14 @@
       <input type="hidden" id="ID_cal_station" name="ID_cal_station">
       
       <div class="form-row">
-        <div class="form-group">
-          <label>Ouverture Station :</label>
-          <input type="date" id="ouverture_station" name="ouverture_station" onchange="calculerInfosAuto()" required>
-        </div>
-        <div class="form-group">
-          <label>Fermeture Station :</label>
-          <input type="date" id="fermeture_station" name="fermeture_station" onchange="calculerInfosAuto()" required>
-        </div>
+        <div class="form-group"><label>Ouverture Station :</label><input type="date" id="ouverture_station" name="ouverture_station" onchange="calculerInfosAuto()" required></div>
+        <div class="form-group"><label>Fermeture Station :</label><input type="date" id="fermeture_station" name="fermeture_station" onchange="calculerInfosAuto()" required></div>
       </div>
       
       <div class="form-row">
-        <div class="form-group">
-          <label>État Station :</label>
-          <input type="text" id="etat_station" name="etat_station" readonly class="readonly-input">
-        </div>
-        <div class="form-group">
-          <label>Saison :</label>
-          <input type="text" id="saison_station" name="saison_station" readonly class="readonly-input">
-        </div>
-        <div class="form-group">
-          <label>Années Station :</label>
-          <input type="text" id="années_station" name="années_station" placeholder="AAAA/AAAA" readonly class="readonly-input">
-        </div>
+        <div class="form-group"><label>État Station :</label><input type="text" id="etat_station" name="etat_station" readonly class="readonly-input"></div>
+        <div class="form-group"><label>Saison :</label><input type="text" id="saison_station" name="saison_station" readonly class="readonly-input"></div>
+        <div class="form-group"><label>Années Station :</label><input type="text" id="années_station" name="années_station" placeholder="AAAA/AAAA" readonly class="readonly-input"></div>
       </div>
       
       <div class="actions">
@@ -48,9 +40,7 @@
         <button type="button" id="btnDelete" class="danger" style="display:none;" onclick="confirmerSuppression()">Supprimer</button>
       </div>
     </form>
-    
     <div id="messageBox"></div>
-
     <?!= include('JS_Station'); ?>
   </body>
 </html>

@@ -61,6 +61,7 @@
       document.getElementById('kpi_count').innerText = reponse.kpis.count;
       document.getElementById('kpi_brut').innerText = reponse.kpis.totalBrut + " €";
       document.getElementById('kpi_comm').innerText = reponse.kpis.totalComm + " €";
+      document.getElementById('kpi_conciergerie').innerText = reponse.kpis.totalCommConciergerie + " €";
       document.getElementById('kpi_net').innerText = reponse.kpis.totalNet + " €";
       document.getElementById('kpiTotalLibre').innerText = (reponse.kpis.totalLibre || "0.00") + " €";
 
@@ -69,7 +70,7 @@
       tbody.innerHTML = "";
 
       if (reponse.lignes.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" style="text-align: center;">Aucune réservation trouvée pour ces filtres.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align: center;">Aucune réservation trouvée pour ces filtres.</td></tr>';
         afficherMessage("");
         return;
       }
@@ -86,6 +87,7 @@
           '<td>' + l.etatStation + '</td>' +
           '<td class="number-col">' + l.tarifBrut + '</td>' +
           '<td class="number-col">' + l.commission + '</td>' +
+          '<td class="number-col" style="color:#e74c3c;">' + l.commConciergerie + '</td>' +
           '<td class="number-col"><b>' + l.montantNet + '</b></td>';
         tbody.appendChild(tr);
       });

@@ -33,6 +33,7 @@
       .table-container {
         max-height: 480px;
         overflow-y: auto;
+        overflow-x: auto;
         border: 1px solid #ccc;
         border-radius: 6px;
         background: white;
@@ -123,6 +124,10 @@
         <div id="kpi_comm" class="valeur">0.00 €</div>
       </div>
       <div class="kpi-card">
+        <h4>Frais Conciergerie</h4>
+        <div id="kpi_conciergerie" class="valeur" style="color: #e74c3c;">0.00 €</div>
+      </div>
+      <div class="kpi-card">
         <h4>Net Restant</h4>
         <div id="kpi_net" class="valeur" style="color: #27ae60;">0.00 €</div>
       </div>
@@ -145,12 +150,13 @@
             <th>Saison</th>
             <th>Station</th>
             <th class="number-col">Brut (€)</th>
-            <th class="number-col">Comm. (€)</th>
+            <th class="number-col">Comm. OT (€)</th>
+            <th class="number-col">Conciergerie (€)</th>
             <th class="number-col">Net (€)</th>
           </tr>
         </thead>
         <tbody id="corpsTableau">
-          <tr><td colspan="10" style="text-align: center;">Chargement des données...</td></tr>
+          <tr><td colspan="11" style="text-align: center;">Chargement des données...</td></tr>
         </tbody>
       </table>
     </div>

@@ -71,7 +71,7 @@ function rechercherEnregistrementParDate(nomFeuille, nomColonne, dateSearchStr) 
   }
   
   if (colIndex === -1) {
-    return { erreurDebug: "La colonne '" + nomColonne + "' est introuvable dans la feuille." };
+    return { erreurDebug: "La colonne '" + nomColonne + "' est introuvable." };
   }
 
   const timeZone = ss.getSpreadsheetTimeZone();
@@ -81,7 +81,6 @@ function rechercherEnregistrementParDate(nomFeuille, nomColonne, dateSearchStr) 
     if (!cellValue) continue;
     
     let dateStr = "";
-    
     if (Object.prototype.toString.call(cellValue) === '[object Date]') {
       dateStr = Utilities.formatDate(cellValue, timeZone, "yyyy-MM-dd");
     } else {
@@ -217,9 +216,7 @@ function dateExisteDeja(nomFeuille, nomColonne, dateSearchStr, currentRowIndex) 
       }
     }
     
-    if (dateStr === dateSearchStr) {
-      return true; 
-    }
+    if (dateStr === dateSearchStr) return true; 
   }
   return false;
 }
